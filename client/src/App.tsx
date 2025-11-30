@@ -17,6 +17,7 @@ import Library from "@/pages/library/Library";
 import Analytics from "@/pages/analytics/Analytics";
 import Hostel from "@/pages/hostel/Hostel";
 import Settings from "@/pages/settings/Settings";
+import LMS from "@/pages/lms/LMS"; // Added LMS import
 
 function Router() {
   return (
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/hostel" component={Hostel} />
       <Route path="/settings" component={Settings} />
+      <Route path="/lms" component={LMS} /> {/* Added LMS Route */}
       <Route component={NotFound} />
     </Switch>
   );

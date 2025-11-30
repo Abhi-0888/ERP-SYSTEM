@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DigitalIDCard } from "@/components/features/DigitalIDCard"; // Import DigitalIDCard
 import { 
   BarChart, 
   Bar, 
@@ -31,6 +32,7 @@ export default function Home() {
           <p className="text-muted-foreground mt-1">Overview of your institution's performance today.</p>
         </div>
         <div className="flex gap-3">
+          <DigitalIDCard /> {/* Add DigitalIDCard button */}
           <Button variant="outline" className="gap-2">
             <Download className="w-4 h-4" />
             Export Report

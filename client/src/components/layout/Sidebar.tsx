@@ -13,7 +13,8 @@ import {
   Bus,
   Library,
   Brain,
-  Home
+  Home,
+  MonitorPlay
 } from "lucide-react";
 
 export function Sidebar() {
@@ -25,6 +26,7 @@ export function Sidebar() {
     { icon: CalendarCheck, label: "Attendance", href: "/attendance" },
     { icon: CreditCard, label: "Fees", href: "/fees" },
     { icon: BookOpen, label: "Academics", href: "/academics" },
+    { icon: MonitorPlay, label: "LMS", href: "/lms" }, // Added LMS
     { icon: MessageSquare, label: "Communication", href: "/notices" },
     { icon: Brain, label: "Analytics", href: "/analytics" },
     { icon: Home, label: "Hostel", href: "/hostel" },
