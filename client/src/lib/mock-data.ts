@@ -40,6 +40,34 @@ export interface FeeRecord {
   type: "Tuition" | "Transport" | "Library" | "Exam";
 }
 
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  isbn: string;
+  status: "available" | "issued" | "reserved";
+  category: string;
+}
+
+export interface TransportRoute {
+  id: string;
+  routeNo: string;
+  driver: string;
+  vehicleNo: string;
+  capacity: number;
+  students: number;
+  status: "on-time" | "delayed" | "maintenance";
+}
+
+export interface Exam {
+  id: string;
+  name: string;
+  class: string;
+  startDate: string;
+  endDate: string;
+  status: "upcoming" | "ongoing" | "completed";
+}
+
 // Mock Data
 export const currentUser: UserProfile = {
   id: "u1",
@@ -80,7 +108,33 @@ export const attendanceData = [
 ];
 
 export const notices = [
-  { id: 1, title: "Annual Sports Day", date: "2024-04-25", category: "Event", priority: "high" },
-  { id: 2, title: "Parent-Teacher Meeting", date: "2024-04-28", category: "Meeting", priority: "medium" },
-  { id: 3, title: "Science Fair Registration", date: "2024-05-01", category: "Academic", priority: "low" },
+  { id: 1, title: "Annual Sports Day", date: "2024-04-25", content: "All students are requested to assemble in the main ground by 8:00 AM.", category: "Event", priority: "high" },
+  { id: 2, title: "Parent-Teacher Meeting", date: "2024-04-28", content: "PTM for Classes 1-10 will be held this Saturday.", category: "Meeting", priority: "medium" },
+  { id: 3, title: "Science Fair Registration", date: "2024-05-01", content: "Last date to submit projects is May 5th.", category: "Academic", priority: "low" },
+];
+
+export const timetable = [
+  { time: "08:00 - 09:00", mon: "Math (10-A)", tue: "Physics (10-A)", wed: "Math (10-A)", thu: "Physics (10-A)", fri: "Math (10-A)" },
+  { time: "09:00 - 10:00", mon: "Eng (10-A)", tue: "Chem (10-A)", wed: "Eng (10-A)", thu: "Chem (10-A)", fri: "Eng (10-A)" },
+  { time: "10:00 - 10:30", mon: "Break", tue: "Break", wed: "Break", thu: "Break", fri: "Break" },
+  { time: "10:30 - 11:30", mon: "Hist (10-A)", tue: "Bio (10-A)", wed: "Geog (10-A)", thu: "Bio (10-A)", fri: "Hist (10-A)" },
+  { time: "11:30 - 12:30", mon: "Comp (10-A)", tue: "Math (10-A)", wed: "Phy Ed (10-A)", thu: "Comp (10-A)", fri: "Art (10-A)" },
+];
+
+export const books: Book[] = [
+  { id: "b1", title: "A Brief History of Time", author: "Stephen Hawking", isbn: "978-0553380163", status: "available", category: "Science" },
+  { id: "b2", title: "To Kill a Mockingbird", author: "Harper Lee", isbn: "978-0061120084", status: "issued", category: "Literature" },
+  { id: "b3", title: "Clean Code", author: "Robert C. Martin", isbn: "978-0132350884", status: "available", category: "Technology" },
+  { id: "b4", title: "1984", author: "George Orwell", isbn: "978-0451524935", status: "reserved", category: "Literature" },
+];
+
+export const transportRoutes: TransportRoute[] = [
+  { id: "r1", routeNo: "R-01", driver: "John Smith", vehicleNo: "KA-01-AB-1234", capacity: 40, students: 35, status: "on-time" },
+  { id: "r2", routeNo: "R-02", driver: "Mike Johnson", vehicleNo: "KA-01-AB-5678", capacity: 40, students: 38, status: "delayed" },
+  { id: "r3", routeNo: "R-03", driver: "Sarah Williams", vehicleNo: "KA-01-AB-9012", capacity: 30, students: 25, status: "on-time" },
+];
+
+export const exams: Exam[] = [
+  { id: "e1", name: "Mid-Term Examinations", class: "Class 10", startDate: "2024-05-10", endDate: "2024-05-20", status: "upcoming" },
+  { id: "e2", name: "Unit Test 1", class: "Class 9", startDate: "2024-04-05", endDate: "2024-04-10", status: "completed" },
 ];

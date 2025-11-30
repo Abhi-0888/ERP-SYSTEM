@@ -1,8 +1,9 @@
-import { Bell, Search, Menu } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { currentUser } from "@/lib/mock-data";
+import { MobileNav } from "./MobileNav";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,14 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Link } from "wouter";
 
 export function Header() {
   return (
     <header className="h-16 bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-20 flex items-center justify-between px-6">
       <div className="flex items-center gap-4 md:hidden">
-        <Button variant="ghost" size="icon">
-          <Menu className="w-5 h-5" />
-        </Button>
+        <MobileNav />
         <span className="font-display font-bold text-lg text-primary">EduCore</span>
       </div>
 
@@ -58,10 +58,14 @@ export function Header() {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>
+              <Link href="/settings">Settings</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem>Notifications</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive">Log out</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <Link href="/">Log out</Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

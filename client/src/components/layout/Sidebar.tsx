@@ -9,7 +9,11 @@ import {
   MessageSquare, 
   Settings, 
   GraduationCap,
-  LogOut
+  LogOut,
+  Bus,
+  Library,
+  Brain,
+  Home
 } from "lucide-react";
 
 export function Sidebar() {
@@ -21,7 +25,11 @@ export function Sidebar() {
     { icon: CalendarCheck, label: "Attendance", href: "/attendance" },
     { icon: CreditCard, label: "Fees", href: "/fees" },
     { icon: BookOpen, label: "Academics", href: "/academics" },
-    { icon: MessageSquare, label: "Notices", href: "/notices" },
+    { icon: MessageSquare, label: "Communication", href: "/notices" },
+    { icon: Brain, label: "Analytics", href: "/analytics" },
+    { icon: Home, label: "Hostel", href: "/hostel" },
+    { icon: Bus, label: "Transport", href: "/transport" },
+    { icon: Library, label: "Library", href: "/library" },
   ];
 
   return (
