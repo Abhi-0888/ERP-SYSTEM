@@ -29,7 +29,9 @@ export default function UniversitiesManagementPage() {
     const [formData, setFormData] = useState({
         name: "",
         code: "",
-        contactEmail: "",
+        adminEmail: "",
+        adminUsername: "",
+        adminPassword: "",
         address: "",
         subscriptionPlan: "basic"
     });
@@ -52,8 +54,8 @@ export default function UniversitiesManagementPage() {
     }, []);
 
     const handleCreate = async () => {
-        if (!formData.name || !formData.code) {
-            toast.error("Name and Unique Code are mandatory");
+        if (!formData.name || !formData.code || !formData.adminEmail || !formData.adminUsername || !formData.adminPassword) {
+            toast.error("All credential fields are mandatory for provisioning");
             return;
         }
         try {
@@ -63,7 +65,9 @@ export default function UniversitiesManagementPage() {
             setFormData({
                 name: "",
                 code: "",
-                contactEmail: "",
+                adminEmail: "",
+                adminUsername: "",
+                adminPassword: "",
                 address: "",
                 subscriptionPlan: "basic"
             });
@@ -151,10 +155,31 @@ export default function UniversitiesManagementPage() {
                                     <Input
                                         type="email"
                                         placeholder="admin@entity.edu"
-                                        value={formData.contactEmail}
-                                        onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                                        value={formData.adminEmail}
+                                        onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
                                         className="rounded-xl"
                                     />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Admin Username</label>
+                                        <Input
+                                            placeholder="univ_admin"
+                                            value={formData.adminUsername}
+                                            onChange={(e) => setFormData({ ...formData, adminUsername: e.target.value })}
+                                            className="rounded-xl"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Admin Password</label>
+                                        <Input
+                                            type="password"
+                                            placeholder="••••••••"
+                                            value={formData.adminPassword}
+                                            onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                                            className="rounded-xl"
+                                        />
+                                    </div>
                                 </div>
                                 <DialogFooter className="pt-4">
                                     <Button variant="ghost" onClick={() => setIsCreateDialogOpen(false)} className="rounded-xl">Cancel</Button>

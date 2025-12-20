@@ -4,11 +4,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../user/user.schema';
+import { University, UniversityDocument } from '../university/university.schema';
 
 @Injectable()
 export class AuthService {
     constructor(
         @InjectModel(User.name) private userModel: Model<UserDocument>,
+        @InjectModel(University.name) private universityModel: Model<UniversityDocument>,
         private jwtService: JwtService,
     ) { }
 
@@ -41,6 +43,9 @@ export class AuthService {
         // Update last login
         await this.userModel.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
+        // Fetch university details
+        const university = await this.universityModel.findById(user.universityId).exec();
+
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -48,6 +53,8 @@ export class AuthService {
                 username: user.username,
                 role: user.role,
                 universityId: user.universityId,
+                universityStatus: university?.status || 'active',
+                onboardingStage: university?.onboardingStage || 0
             },
         };
     }

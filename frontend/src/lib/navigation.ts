@@ -1,5 +1,36 @@
 import { Role, NavGroup } from "./types";
 
+export type ShellType = "platform" | "university" | "module" | "portal";
+
+export const SHELL_CONFIG: Record<ShellType, Role[]> = {
+    platform: ["SUPER_ADMIN"],
+    university: ["UNIVERSITY_ADMIN", "PRINCIPAL", "REGISTRAR", "HOD", "FACULTY", "ACADEMIC_COORDINATOR", "EXAM_CONTROLLER", "FINANCE"],
+    module: ["LIBRARIAN", "ACCOUNTANT", "HOSTEL_WARDEN", "TRANSPORT_MANAGER", "PLACEMENT_OFFICER", "PLACEMENT_CELL"],
+    portal: ["STUDENT", "PARENT"],
+};
+
+// Map roles to their primary workspace base URL
+export const ROLE_WORKSPACE: Record<Role, string> = {
+    SUPER_ADMIN: "/super-admin",
+    STUDENT: "/portal",
+    PARENT: "/portal",
+    // All others use dashboard
+    UNIVERSITY_ADMIN: "/dashboard",
+    PRINCIPAL: "/dashboard",
+    REGISTRAR: "/dashboard",
+    HOD: "/dashboard",
+    FACULTY: "/dashboard",
+    ACADEMIC_COORDINATOR: "/dashboard",
+    EXAM_CONTROLLER: "/dashboard",
+    FINANCE: "/dashboard",
+    LIBRARIAN: "/dashboard",
+    ACCOUNTANT: "/dashboard",
+    HOSTEL_WARDEN: "/dashboard",
+    TRANSPORT_MANAGER: "/dashboard",
+    PLACEMENT_OFFICER: "/dashboard",
+    PLACEMENT_CELL: "/dashboard",
+};
+
 // Role-based navigation configuration
 export const roleNavigation: Record<Role, NavGroup[]> = {
     SUPER_ADMIN: [
@@ -139,24 +170,25 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
         {
             title: "Overview",
             items: [
-                { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+                { title: "Dashboard", href: "/portal", icon: "LayoutDashboard" },
             ],
         },
         {
             title: "Academics",
             items: [
-                { title: "Attendance", href: "/dashboard/attendance", icon: "ClipboardList" },
-                { title: "Timetable", href: "/dashboard/timetable", icon: "Calendar" },
-                { title: "Exams & Results", href: "/dashboard/exams", icon: "FileText" },
+                { title: "Attendance", href: "/portal/attendance", icon: "ClipboardList" },
+                { title: "Timetable", href: "/portal/timetable", icon: "Calendar" },
+                { title: "Exams & Results", href: "/portal/exams", icon: "FileText" },
             ],
         },
         {
             title: "Services",
             items: [
-                { title: "Fees", href: "/dashboard/fees", icon: "CreditCard" },
-                { title: "Library", href: "/dashboard/library", icon: "Library" },
-                { title: "Hostel", href: "/dashboard/hostel", icon: "Home" },
-                { title: "Placement", href: "/dashboard/placement", icon: "Briefcase" },
+                { title: "Fees", href: "/portal/fees", icon: "CreditCard" },
+                { title: "Library", href: "/portal/library", icon: "Library" },
+                { title: "Hostel", href: "/portal/hostel", icon: "Home" },
+                { title: "Transport", href: "/portal/transport", icon: "Bus" },
+                { title: "Placement", href: "/portal/placement", icon: "Briefcase" },
             ],
         },
     ],
@@ -165,30 +197,31 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
         {
             title: "Overview",
             items: [
-                { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+                { title: "Dashboard", href: "/portal", icon: "LayoutDashboard" },
             ],
         },
         {
             title: "Child's Progress",
             items: [
-                { title: "Attendance", href: "/dashboard/attendance", icon: "ClipboardList" },
-                { title: "Exam Results", href: "/dashboard/exams", icon: "FileText" },
-                { title: "Fees", href: "/dashboard/fees", icon: "CreditCard" },
+                { title: "Attendance", href: "/portal/attendance", icon: "ClipboardList" },
+                { title: "Exam Results", href: "/portal/exams", icon: "FileText" },
+                { title: "Fees", href: "/portal/fees", icon: "CreditCard" },
             ],
         },
     ],
 
     LIBRARIAN: [
         {
-            title: "Overview",
+            title: "Operational Dash",
             items: [
-                { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+                { title: "Library Dashboard", href: "/modules/library", icon: "LayoutDashboard" },
             ],
         },
         {
-            title: "Library",
+            title: "Resources",
             items: [
-                { title: "Library", href: "/dashboard/library", icon: "Library" },
+                { title: "Catalog", href: "/modules/library/catalog", icon: "Library" },
+                { title: "Issues/Returns", href: "/modules/library/circulation", icon: "ClipboardList" },
             ],
         },
     ],
@@ -211,46 +244,48 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
 
     HOSTEL_WARDEN: [
         {
-            title: "Overview",
+            title: "Operations",
             items: [
-                { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+                { title: "Warden Dashboard", href: "/modules/hostel", icon: "LayoutDashboard" },
             ],
         },
         {
             title: "Hostel",
             items: [
-                { title: "Hostel Management", href: "/dashboard/hostel", icon: "Home" },
+                { title: "Room Allocation", href: "/modules/hostel/rooms", icon: "Home" },
+                { title: "Attendance", href: "/modules/hostel/attendance", icon: "UserCheck" },
             ],
         },
     ],
 
     TRANSPORT_MANAGER: [
         {
-            title: "Overview",
+            title: "Operations",
             items: [
-                { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+                { title: "Fleet Dashboard", href: "/modules/transport", icon: "LayoutDashboard" },
             ],
         },
         {
             title: "Transport",
             items: [
-                { title: "Transport Management", href: "/dashboard/transport", icon: "Bus" },
+                { title: "Vehicles", href: "/modules/transport/vehicles", icon: "Bus" },
+                { title: "Routes", href: "/modules/transport/routes", icon: "Route" },
             ],
         },
     ],
 
     PLACEMENT_OFFICER: [
         {
-            title: "Overview",
+            title: "Vertical Head",
             items: [
-                { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+                { title: "Placement Dashboard", href: "/modules/placement", icon: "LayoutDashboard" },
             ],
         },
         {
-            title: "Placement",
+            title: "Corporate Relations",
             items: [
-                { title: "Placement Portal", href: "/dashboard/placement", icon: "Briefcase" },
-                { title: "Reports", href: "/dashboard/reports", icon: "BarChart3" },
+                { title: "Company Database", href: "/modules/placement/companies", icon: "Building2" },
+                { title: "Drives", href: "/modules/placement/drives", icon: "Briefcase" },
             ],
         },
     ],

@@ -6,17 +6,20 @@ import { useAuth } from "@/lib/auth";
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, activeRole } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        router.push("/dashboard");
+      if (isAuthenticated && activeRole) {
+        // Use the workspace mapping to redirect correctly
+        const { ROLE_WORKSPACE } = require("@/lib/navigation");
+        const target = ROLE_WORKSPACE[activeRole] || "/dashboard";
+        router.push(target);
       } else {
-        router.push("/login");
+        router.push("/auth/login");
       }
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, activeRole, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100">

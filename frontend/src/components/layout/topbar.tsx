@@ -17,6 +17,7 @@ import {
 import {
     Search, Bell, Menu, ChevronDown, User, Settings, LogOut, Sparkles
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TopbarProps {
     onMenuClick: () => void;
@@ -83,23 +84,33 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 {user && user.roles.length > 1 && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
-                                <span className="text-xs font-medium">
+                            <Button variant="outline" size="sm" className="hidden sm:flex gap-2 border-slate-200 hover:bg-slate-50 rounded-xl">
+                                <span className="text-xs font-semibold text-slate-700">
                                     {activeRole ? roleDisplayNames[activeRole] : "Select Role"}
+                                    {activeRole === 'HOD' && user.departmentName && ` - ${user.departmentName}`}
                                 </span>
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-4 w-4 text-slate-400" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
+                        <DropdownMenuContent align="end" className="w-64 p-2 rounded-2xl shadow-xl border-slate-100">
+                            <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-slate-400 font-black mb-1">Switch Context</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-slate-50" />
                             {user.roles.map((role) => (
                                 <DropdownMenuItem
                                     key={role}
                                     onClick={() => setActiveRole(role)}
-                                    className={activeRole === role ? "bg-slate-100" : ""}
+                                    className={cn(
+                                        "flex flex-col items-start gap-0.5 rounded-xl px-3 py-2 cursor-pointer transition-colors",
+                                        activeRole === role ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-50"
+                                    )}
                                 >
-                                    {roleDisplayNames[role]}
+                                    <span className="font-bold text-sm">{roleDisplayNames[role]}</span>
+                                    {role === 'HOD' && user.departmentName && (
+                                        <span className="text-[10px] opacity-70 uppercase font-medium">{user.departmentName}</span>
+                                    )}
+                                    {role === 'STUDENT' && user.universityName && (
+                                        <span className="text-[10px] opacity-70 uppercase font-medium">{user.universityName}</span>
+                                    )}
                                 </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>

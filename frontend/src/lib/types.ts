@@ -30,6 +30,8 @@ export type User = {
     departmentId?: string;
     departmentName?: string;
     roles: Role[];
+    universityStatus?: 'setup' | 'active' | 'suspended';
+    onboardingStage?: number;
 };
 
 export interface LoginResponse {
@@ -39,6 +41,8 @@ export interface LoginResponse {
         username: string;
         role: Role;
         universityId: string;
+        universityStatus?: 'setup' | 'active' | 'suspended';
+        onboardingStage?: number;
     };
 }
 

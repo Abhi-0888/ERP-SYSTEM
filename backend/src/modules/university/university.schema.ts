@@ -34,8 +34,11 @@ export class University {
     })
     subscriptionDetails: Record<string, any>;
 
-    @Prop({ default: 'active' })
-    status: string;
+    @Prop({ default: 'setup' })
+    status: string; // 'setup' | 'active' | 'suspended'
+
+    @Prop({ default: 0 })
+    onboardingStage: number;
 
     @Prop()
     logo: string;
