@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,21 +13,63 @@ import {
 } from "@/components/ui/dialog";
 import {
     Key, ShieldAlert, Clock, UserPlus,
-    Trash2, AlertTriangle, ShieldCheck, History,
-    CheckCircle2, XCircle
+    Trash2, AlertTriangle, ShieldCheck, History as HistoryIcon,
+    CheckCircle2, XCircle, Activity
 } from "lucide-react";
+import api from "@/lib/api";
 import { toast } from "sonner";
 
 export default function PermissionOverridesPage() {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-    const [overrides, setOverrides] = useState([
-        { id: "1", user: "John Doe", university: "SRM AP", originalRole: "FACULTY", tempRole: "REGISTRAR", start: "2025-12-20T08:00:00Z", end: "2025-12-20T18:00:00Z", reason: "Emergency grade verification", status: "active" },
-        { id: "2", user: "Alice Smith", university: "Vellore Tech", originalRole: "HOD", tempRole: "UNIVERSITY_ADMIN", start: "2025-12-19T09:00:00Z", end: "2025-12-21T09:00:00Z", reason: "System migration support", status: "active" },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [overrides, setOverrides] = useState<any[]>([]);
+    const [formData, setFormData] = useState({
+        userId: "",
+        tempRole: "REGISTRAR",
+        durationHours: 4,
+        reason: ""
+    });
 
-    const handleRevoke = (id: string) => {
-        setOverrides(overrides.map(o => o.id === id ? { ...o, status: "revoked" } : o));
-        toast.info("Temporal override revoked and logged.");
+    const fetchOverrides = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/super-admin/overrides');
+            setOverrides(res.data);
+        } catch (error) {
+            toast.error("Failed to load secure access records");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchOverrides();
+    }, []);
+
+    const handleCreate = async () => {
+        if (!formData.userId || !formData.reason) {
+            toast.error("User ID and Justification are required");
+            return;
+        }
+        try {
+            await api.post('/super-admin/overrides', formData);
+            toast.success("Override Deployed Successfully");
+            setIsCreateDialogOpen(false);
+            setFormData({ userId: "", tempRole: "REGISTRAR", durationHours: 4, reason: "" });
+            fetchOverrides();
+        } catch (error) {
+            toast.error("Failed to execute elevation");
+        }
+    };
+
+    const handleRevoke = async (id: string) => {
+        try {
+            await api.patch(`/super-admin/overrides/${id}/revoke`);
+            toast.info("Temporal override revoked and logged.");
+            fetchOverrides();
+        } catch (error) {
+            toast.error("Revocation failed");
+        }
     };
 
     return (
@@ -204,7 +246,7 @@ export default function PermissionOverridesPage() {
                     <Card className="border-0 shadow-sm rounded-3xl bg-white border border-slate-100 overflow-hidden">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2 text-slate-800">
-                                <History className="h-5 w-5 text-slate-400" />
+                                <HistoryIcon className="h-5 w-5 text-slate-400" />
                                 Recent Revocations
                             </CardTitle>
                         </CardHeader>

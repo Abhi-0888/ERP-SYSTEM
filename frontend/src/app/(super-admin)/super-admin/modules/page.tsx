@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,9 @@ import {
     ShieldAlert, Zap, Search, LayoutGrid, AlertCircle, RefreshCw
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import api from "@/lib/api";
+import { toast } from "sonner";
+import { UniversityService } from "@/lib/services/university.service";
 
 const MODULES = [
     { id: "library", name: "Library Management", icon: Library, color: "text-blue-500", bg: "bg-blue-50" },
@@ -21,6 +24,42 @@ const MODULES = [
 
 export default function ModuleFlagsPage() {
     const [searchQuery, setSearchQuery] = useState("");
+    const [universities, setUniversities] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchUniversities = async () => {
+        setLoading(true);
+        try {
+            const data = await UniversityService.getAll();
+            setUniversities(data);
+        } catch (error) {
+            toast.error("Failed to load tenant modules base");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUniversities();
+    }, []);
+
+    const handleToggleModule = async (univId: string, moduleName: string, currentlyEnabled: boolean) => {
+        const univ = universities.find(u => u._id === univId);
+        if (!univ) return;
+
+        const enabledModules = univ.enabledModules || [];
+        const newModules = currentlyEnabled
+            ? enabledModules.filter((m: string) => m !== moduleName)
+            : [...enabledModules, moduleName];
+
+        try {
+            await UniversityService.update(univId, { enabledModules: newModules });
+            toast.success(`${moduleName} ${currentlyEnabled ? 'disabled' : 'enabled'} for tenant.`);
+            fetchUniversities();
+        } catch (error) {
+            toast.error("Module configuration failed");
+        }
+    };
 
     return (
         <div className="space-y-8">

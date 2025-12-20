@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,19 +9,37 @@ import { Switch } from "@/components/ui/switch";
 import {
     Settings, Shield, Clock, HardDrive,
     Mail, MessageSquare, Zap, Save,
-    RefreshCcw, Eye, EyeOff
+    RefreshCcw, Eye, EyeOff, AlertCircle, Lock
 } from "lucide-react";
+import api from "@/lib/api";
 import { toast } from "sonner";
 
 export default function SystemSettingsPage() {
     const [maskKeys, setMaskKeys] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [settings, setSettings] = useState<any>(null);
 
-    const handleSave = () => {
-        toast.promise(new Promise(resolve => setTimeout(resolve, 1500)), {
-            loading: 'Propagating global configuration changes...',
-            success: 'System settings updated and distributed successfully',
-            error: 'Failed to update system settings'
-        });
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await api.get('/settings/global');
+                setSettings(res.data);
+            } catch (error) {
+                toast.error("Failed to load global configuration");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleSave = async () => {
+        try {
+            await api.patch('/settings/global', settings);
+            toast.success('System settings updated and distributed successfully');
+        } catch (error) {
+            toast.error('Failed to update system settings');
+        }
     };
 
     return (

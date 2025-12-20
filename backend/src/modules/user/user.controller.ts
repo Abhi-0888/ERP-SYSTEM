@@ -60,4 +60,22 @@ export class UserController {
     remove(@Param('id') id: string) {
         return this.userService.remove(id);
     }
+
+    @Patch(':id/force-logout')
+    @Roles(Role.SUPER_ADMIN)
+    forceLogout(@Param('id') id: string) {
+        return this.userService.forceLogout(id);
+    }
+
+    @Patch(':id/status')
+    @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN)
+    updateStatus(@Param('id') id: string, @Body('status') status: string) {
+        return this.userService.updateStatus(id, status);
+    }
+
+    @Patch(':id/reset-password')
+    @Roles(Role.SUPER_ADMIN)
+    resetPassword(@Param('id') id: string) {
+        return this.userService.resetPassword(id);
+    }
 }

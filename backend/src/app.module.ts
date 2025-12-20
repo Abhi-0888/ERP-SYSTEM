@@ -15,6 +15,8 @@ import { LibraryModule } from './modules/library/library.module';
 import { HostelModule } from './modules/hostel/hostel.module';
 import { PlacementModule } from './modules/placement/placement.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { SupportModule } from './modules/support/support.module';
 import { AppController } from './app.controller';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -44,6 +46,8 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
         HostelModule,
         PlacementModule,
         AuditModule,
+        SettingsModule,
+        SupportModule,
     ],
     controllers: [AppController],
     providers: [

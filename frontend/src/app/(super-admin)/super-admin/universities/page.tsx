@@ -24,7 +24,7 @@ import { toast } from "sonner";
 export default function UniversitiesManagementPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-    const [universities, setUniversities] = useState<University[]>([]);
+    const [universities, setUniversities] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
         name: "",
@@ -211,7 +211,7 @@ export default function UniversitiesManagementPage() {
                                 </TableRow>
                             ) : (
                                 filteredUniversities.map((uni) => (
-                                    <TableRow key={uni._id} className="hover:bg-slate-50/50 transition-colors">
+                                    <TableRow key={uni._id || uni.id} className="hover:bg-slate-50/50 transition-colors">
                                         <TableCell>
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center text-slate-600 font-bold border border-slate-200 shadow-sm">
@@ -231,8 +231,8 @@ export default function UniversitiesManagementPage() {
                                         <TableCell>
                                             <div className="space-y-1">
                                                 <Badge variant="secondary" className={`capitalize text-[10px] tracking-widest ${uni.subscriptionPlan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-                                                        uni.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-slate-100 text-slate-700'
+                                                    uni.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-slate-100 text-slate-700'
                                                     }`}>
                                                     {uni.subscriptionPlan}
                                                 </Badge>

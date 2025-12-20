@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,28 @@ import {
     Terminal, Lock, Laptop, Globe, AlertCircle, RefreshCw,
     Filter, Download, Trash2, Ban
 } from "lucide-react";
+import api from "@/lib/api";
+import { toast } from "sonner";
 
 export default function SecurityCenterPage() {
     const [activeTab, setActiveTab] = useState("audit");
+    const [loading, setLoading] = useState(true);
+    const [logs, setLogs] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchLogs = async () => {
+            setLoading(true);
+            try {
+                const res = await api.get('/audit');
+                setLogs(res.data);
+            } catch (error) {
+                toast.error("Failed to load forensic audit trail");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchLogs();
+    }, []);
 
     return (
         <div className="space-y-6">

@@ -49,4 +49,24 @@ export class UserService {
         if (universityId) filter.universityId = universityId;
         return this.userModel.find(filter).select('-password').exec();
     }
+
+    async forceLogout(id: string): Promise<User> {
+        // In a real implementation with redis/tokens, we would invalidate the tokens.
+        // For now, we update a 'lastLogoutAllNodes' or similar field to invalidate current sessions.
+        return this.userModel.findByIdAndUpdate(id, { lastLogoutAllNodes: new Date() }, { new: true }).exec();
+    }
+
+    async updateStatus(id: string, status: string): Promise<User> {
+        return this.userModel.findByIdAndUpdate(id, { status }, { new: true }).exec();
+    }
+
+    async resetPassword(id: string): Promise<User> {
+        // Strategic reset: set a random password and flag for reset on next login
+        const tempPassword = Math.random().toString(36).substring(2, 10);
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        return this.userModel.findByIdAndUpdate(id, {
+            password: hashedPassword,
+            mustChangePassword: true
+        }, { new: true }).exec();
+    }
 }

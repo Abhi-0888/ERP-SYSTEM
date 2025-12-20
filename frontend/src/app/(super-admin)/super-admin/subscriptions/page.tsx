@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,9 @@ import {
     CreditCard, Check, Zap, Rocket, Shield,
     Users, Database, BrainCircuit, Globe
 } from "lucide-react";
+import api from "@/lib/api";
+import { toast } from "sonner";
+import { UniversityService } from "@/lib/services/university.service";
 
 interface Plan {
     id: string;
@@ -71,6 +74,41 @@ const PLANS: Plan[] = [
 ];
 
 export default function SubscriptionsPage() {
+    const [selectedUniv, setSelectedUniv] = useState<string>("");
+    const [universities, setUniversities] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUniversities = async () => {
+            try {
+                const data = await UniversityService.getAll();
+                setUniversities(data);
+                if (data.length > 0) setSelectedUniv(data[0]._id);
+            } catch (error) {
+                toast.error("Failed to load subscription base");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUniversities();
+    }, []);
+
+    const handleUpgrade = async (planId: string) => {
+        if (!selectedUniv) {
+            toast.error("Select a university first");
+            return;
+        }
+        try {
+            await UniversityService.update(selectedUniv, {
+                subscriptionPlan: planId,
+                'subscriptionDetails.planName': planId,
+                'subscriptionDetails.status': 'active'
+            });
+            toast.success(`Plan updated to ${planId.toUpperCase()} for selected tenant.`);
+        } catch (error) {
+            toast.error("Subscription update failed");
+        }
+    };
     const [selectedPlan, setSelectedPlan] = useState<string>("pro");
 
     return (
@@ -96,8 +134,8 @@ export default function SubscriptionsPage() {
                             }`}>
                             <CardHeader className="text-center pt-8">
                                 <div className={`w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 ${plan.color === 'blue' ? 'bg-blue-100 text-blue-600' :
-                                        plan.color === 'purple' ? 'bg-purple-100 text-purple-600' :
-                                            'bg-emerald-100 text-emerald-600'
+                                    plan.color === 'purple' ? 'bg-purple-100 text-purple-600' :
+                                        'bg-emerald-100 text-emerald-600'
                                     }`}>
                                     <Icon className="h-8 w-8" />
                                 </div>

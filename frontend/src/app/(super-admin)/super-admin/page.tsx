@@ -71,24 +71,19 @@ export default function SuperAdminDashboard() {
             try {
                 // In a real scenario, we'd have a single aggregator endpoint /super-admin/stats
                 // For now, we simulate or fetch from basic endpoints
-                const [uniRes, userRes] = await Promise.all([
-                    api.get('/universities'),
-                    api.get('/users')
-                ]);
-
-                const universities = uniRes.data || [];
-                const users = userRes.data || [];
+                const response = await api.get('/super-admin/stats/dashboard');
+                const data = response.data;
 
                 setStats({
-                    totalUniversities: universities.length.toString(),
-                    activeUniversities: universities.filter((u: any) => u.status === 'active').length.toString(),
-                    totalUsers: users.length.toString(),
-                    activeSessions: "142", // Mocked for now
-                    systemStatus: "Healthy",
-                    failedLogins: "12",
-                    permissionOverrides: "2",
-                    auditAlerts: "0",
-                    pendingTickets: "5"
+                    totalUniversities: data.totalUniversities.toString(),
+                    activeUniversities: data.activeUniversities.toString(),
+                    totalUsers: data.totalUsers.toString(),
+                    activeSessions: data.activeSessions.toString(),
+                    systemStatus: data.systemStatus,
+                    failedLogins: data.failedLogins.toString(),
+                    permissionOverrides: data.permissionOverrides.toString(),
+                    auditAlerts: data.auditAlerts.toString(),
+                    pendingTickets: data.pendingTickets.toString()
                 });
             } catch (error) {
                 console.error("Failed to fetch Super Admin stats", error);

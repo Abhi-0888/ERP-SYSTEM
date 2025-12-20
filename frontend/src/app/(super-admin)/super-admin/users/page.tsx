@@ -47,15 +47,34 @@ export default function GlobalUsersPage() {
     );
 
     const handleForceLogout = async (userId: string) => {
-        toast.promise(new Promise(resolve => setTimeout(resolve, 1000)), {
-            loading: 'Invalidating all active sessions...',
-            success: 'User sessions invalidated successfully',
-            error: 'Failed to invalidate sessions'
-        });
+        try {
+            await api.patch(`/users/${userId}/force-logout`);
+            toast.success("Active sessions terminated successfully");
+            fetchUsers();
+        } catch (error) {
+            toast.error("Failed to terminate sessions");
+        }
     };
 
-    const handleDisableUser = async (userId: string) => {
-        toast.success("User access revoked globally");
+    const handleDisableUser = async (userId: string, currentStatus: string) => {
+        const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+        try {
+            await api.patch(`/users/${userId}/status`, { status: newStatus });
+            toast.warning(`User ${newStatus === 'active' ? 'enabled' : 'disabled'} across all nodes.`);
+            fetchUsers();
+        } catch (error) {
+            toast.error("Status update failed");
+        }
+    };
+
+    const handleResetPassword = async (userId: string) => {
+        try {
+            await api.patch(`/users/${userId}/reset-password`);
+            toast.info("Security reset initiated. User must change password at next login.");
+            fetchUsers();
+        } catch (error) {
+            toast.error("Reset failed");
+        }
     };
 
     return (
@@ -153,7 +172,7 @@ export default function GlobalUsersPage() {
                                 </TableRow>
                             ) : (
                                 filteredUsers.map((user) => (
-                                    <TableRow key={user.id} className="hover:bg-slate-50/30 transition-colors border-slate-50">
+                                    <TableRow key={user._id || user.id} className="hover:bg-slate-50/30 transition-colors border-slate-50">
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold border border-white shadow-sm overflow-hidden text-xs">
@@ -161,7 +180,7 @@ export default function GlobalUsersPage() {
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-slate-900 leading-tight">{user.name}</p>
-                                                    <p className="text-xs text-slate-400 font-mono">{user.id.substring(0, 8)}... | {user.email}</p>
+                                                    <p className="text-xs text-slate-400 font-mono">{(user._id || user.id || '........').substring(0, 8)}... | {user.email}</p>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -202,18 +221,18 @@ export default function GlobalUsersPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border-slate-100">
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => handleForceLogout(user.id)}>
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => handleForceLogout(user._id || user.id)}>
                                                         <LogOut className="h-4 w-4 text-orange-500" /> Invalidate Sessions
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer">
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => handleResetPassword(user._id || user.id)}>
                                                         <Key className="h-4 w-4 text-blue-500" /> Reset Credentials
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer">
                                                         <History className="h-4 w-4 text-slate-500" /> Access Audit Trail
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator className="bg-slate-50" />
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer text-red-600 font-bold" onClick={() => handleDisableUser(user.id)}>
-                                                        <Ban className="h-4 w-4" /> Revoke Platform Access
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer text-red-600 font-bold" onClick={() => handleDisableUser(user._id || user.id, user.status)}>
+                                                        <Ban className="h-4 w-4" /> {user.status === 'active' ? 'Revoke Platform Access' : 'Restore Access'}
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,15 +12,42 @@ import {
     History, Ban, ExternalLink, RefreshCw,
     AlertCircle, CheckCircle2
 } from "lucide-react";
+import api from "@/lib/api";
 import { toast } from "sonner";
 
 export default function SupportHubPage() {
     const [activeTab, setActiveTab] = useState("tickets");
+    const [loading, setLoading] = useState(true);
+    const [tickets, setTickets] = useState<any[]>([]);
 
-    const handleImpersonate = () => {
-        toast.warning("IMPERSONATION PROTOCOL INITIATED. Every action will be recorded in the security audit trail.", {
-            duration: 5000,
-        });
+    useEffect(() => {
+        const fetchTickets = async () => {
+            setLoading(true);
+            try {
+                // Assuming /support/tickets exists or we simulate with a real-like call
+                const res = await api.get('/support/tickets');
+                setTickets(res.data);
+            } catch (error) {
+                toast.error("Failed to load global support queue");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTickets();
+    }, []);
+
+    const handleImpersonate = async (userId: string) => {
+        toast.warning("IMPERSONATION PROTOCOL INITIATED. Every action will be recorded in the security audit trail.");
+        try {
+            const res = await api.post(`/auth/impersonate/${userId}`);
+            // Hande the redirection or token swap
+            if (res.data.token) {
+                localStorage.setItem('token', res.data.token);
+                window.location.href = '/dashboard';
+            }
+        } catch (error) {
+            toast.error("Impersonation failed");
+        }
     };
 
     return (

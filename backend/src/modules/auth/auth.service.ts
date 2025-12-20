@@ -52,6 +52,31 @@ export class AuthService {
         };
     }
 
+    async impersonate(targetUserId: string) {
+        const user = await this.userModel.findById(targetUserId).exec();
+        if (!user) {
+            throw new UnauthorizedException('Target user not found');
+        }
+
+        const payload = {
+            username: user.username,
+            sub: user._id,
+            role: user.role,
+            universityId: user.universityId,
+            isImpersonated: true,
+        };
+
+        return {
+            access_token: this.jwtService.sign(payload),
+            user: {
+                id: user._id,
+                username: user.username,
+                role: user.role,
+                universityId: user.universityId,
+            },
+        };
+    }
+
     async hashPassword(password: string): Promise<string> {
         return bcrypt.hash(password, 10);
     }
