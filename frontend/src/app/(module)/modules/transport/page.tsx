@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,26 +9,48 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    Bus, Search, Plus, MoreHorizontal, Route, Users, MapPin, Gauge, ShieldAlert
+    Bus, Search, Plus, MoreHorizontal, Route as RouteIcon, Users, MapPin, Gauge, ShieldAlert, Loader2
 } from "lucide-react";
-import { useState } from "react";
-
-const initialVehicles = [
-    { id: "1", number: "TN-01-AB-1234", type: "Bus", capacity: 50, driver: "Mr. Kumar", route: "Route A", status: "active", health: "95%" },
-    { id: "2", number: "TN-01-CD-5678", type: "Bus", capacity: 45, driver: "Mr. Rajan", route: "Route B", status: "active", health: "88%" },
-    { id: "3", number: "TN-01-EF-9012", type: "Van", capacity: 15, driver: "Mr. Suresh", route: "Route C", status: "maintenance", health: "42%" },
-    { id: "4", number: "TN-01-GH-3456", type: "Bus", capacity: 50, driver: "Mr. Pillai", route: "Route D", status: "active", health: "91%" },
-];
-
-const initialRoutes = [
-    { id: "1", name: "Route A - North", startPoint: "Campus", endPoint: "Anna Nagar", stops: 8, students: 45, vehicle: "TN-01-AB-1234" },
-    { id: "2", name: "Route B - South", startPoint: "Campus", endPoint: "T. Nagar", stops: 6, students: 40, vehicle: "TN-01-CD-5678" },
-    { id: "3", name: "Route C - East", startPoint: "Campus", endPoint: "Adyar", stops: 5, students: 12, vehicle: "TN-01-EF-9012" },
-    { id: "4", name: "Route D - West", startPoint: "Campus", endPoint: "Porur", stops: 7, students: 48, vehicle: "TN-01-GH-3456" },
-];
+import { TransportService } from "@/lib/services/transport.service";
+import { EmptyState } from "@/components/empty-state";
+import { toast } from "sonner";
 
 export default function TransportManagerDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
+    const [vehicles, setVehicles] = useState<any[]>([]);
+    const [routes, setRoutes] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadData() {
+            try {
+                setLoading(true);
+                const [vehRes, routeRes] = await Promise.all([
+                    TransportService.getAllVehicles(),
+                    TransportService.getAllRoutes()
+                ]);
+                setVehicles(vehRes.data || vehRes || []);
+                setRoutes(routeRes.data || routeRes || []);
+            } catch (error) {
+                console.error("Failed to load transport data:", error);
+                toast.error("Failed to load fleet data");
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadData();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-orange-600 mb-4" />
+                <p className="text-slate-500 font-medium">Calibrating fleet telemetry...</p>
+            </div>
+        );
+    }
+
+    const activeVehicles = vehicles.filter(v => v.status === 'active').length;
 
     return (
         <div className="space-y-6">
@@ -49,17 +72,8 @@ export default function TransportManagerDashboard() {
                     <CardContent className="p-6">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Fleet</p>
                         <div className="flex items-end justify-between mt-2">
-                            <p className="text-3xl font-black text-slate-900">12/14</p>
+                            <p className="text-3xl font-black text-slate-900">{activeVehicles}/{vehicles.length}</p>
                             <Bus className="h-8 w-8 text-blue-500 opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm bg-slate-50/50 border border-slate-100">
-                    <CardContent className="p-6">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Staff Drivers</p>
-                        <div className="flex items-end justify-between mt-2">
-                            <p className="text-3xl font-black text-slate-900">18</p>
-                            <Users className="h-8 w-8 text-emerald-500 opacity-20" />
                         </div>
                     </CardContent>
                 </Card>
@@ -67,8 +81,17 @@ export default function TransportManagerDashboard() {
                     <CardContent className="p-6">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Route Coverage</p>
                         <div className="flex items-end justify-between mt-2">
-                            <p className="text-3xl font-black text-slate-900">24 Kms</p>
-                            <Route className="h-8 w-8 text-indigo-500 opacity-20" />
+                            <p className="text-3xl font-black text-slate-900">{routes.length}</p>
+                            <RouteIcon className="h-8 w-8 text-indigo-500 opacity-20" />
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="border-0 shadow-sm bg-slate-50/50 border border-slate-100">
+                    <CardContent className="p-6">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Capacity</p>
+                        <div className="flex items-end justify-between mt-2">
+                            <p className="text-3xl font-black text-slate-900">{vehicles.reduce((acc, v) => acc + v.capacity, 0)}</p>
+                            <Users className="h-8 w-8 text-emerald-500 opacity-20" />
                         </div>
                     </CardContent>
                 </Card>
@@ -76,7 +99,7 @@ export default function TransportManagerDashboard() {
                     <CardContent className="p-6">
                         <p className="text-xs font-bold text-red-600 uppercase tracking-widest">Maintenance Alerts</p>
                         <div className="flex items-end justify-between mt-2">
-                            <p className="text-3xl font-black text-red-900">2</p>
+                            <p className="text-3xl font-black text-red-900">{vehicles.filter(v => v.status === 'maintenance').length}</p>
                             <ShieldAlert className="h-8 w-8 text-red-500 opacity-20" />
                         </div>
                     </CardContent>
@@ -97,52 +120,62 @@ export default function TransportManagerDashboard() {
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-slate-50/30 border-0">
-                                <TableHead className="font-bold h-12">Registration</TableHead>
-                                <TableHead className="font-bold h-12">Model</TableHead>
-                                <TableHead className="font-bold h-12">Driver</TableHead>
-                                <TableHead className="font-bold h-12">Deployment</TableHead>
-                                <TableHead className="font-bold h-12">Status</TableHead>
-                                <TableHead className="font-bold h-12">Flt Health</TableHead>
-                                <TableHead className="font-bold h-12 text-right">Ops</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {initialVehicles.map((vehicle) => (
-                                <TableRow key={vehicle.id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
-                                    <TableCell className="font-mono font-bold text-slate-700">{vehicle.number}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className="rounded-lg text-[10px] font-bold uppercase">{vehicle.type}</Badge>
-                                    </TableCell>
-                                    <TableCell className="font-medium text-slate-900">{vehicle.driver}</TableCell>
-                                    <TableCell className="text-slate-500">{vehicle.route}</TableCell>
-                                    <TableCell>
-                                        <Badge className={vehicle.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-orange-50 text-orange-700 border-orange-100'}>
-                                            {vehicle.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full ${parseInt(vehicle.health) > 80 ? 'bg-emerald-500' : 'bg-orange-500'}`}
-                                                    style={{ width: vehicle.health }}
-                                                />
-                                            </div>
-                                            <span className="text-[10px] font-bold text-slate-500">{vehicle.health}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button size="sm" variant="ghost" className="rounded-lg hover:bg-slate-100">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
+                    {vehicles.length === 0 ? (
+                        <div className="p-12">
+                            <EmptyState
+                                icon={Bus}
+                                title="No Vehicles Registered"
+                                description="Your fleet repository is empty. Add your first vehicle to start tracking routes."
+                                actionLabel="Add Vehicle"
+                                onAction={() => console.log("Open add vehicle dialog")}
+                            />
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/30 border-0">
+                                    <TableHead className="font-bold h-12">Registration</TableHead>
+                                    <TableHead className="font-bold h-12">Type</TableHead>
+                                    <TableHead className="font-bold h-12">Capacity</TableHead>
+                                    <TableHead className="font-bold h-12">Status</TableHead>
+                                    <TableHead className="font-bold h-12">Health</TableHead>
+                                    <TableHead className="font-bold h-12 text-right">Ops</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {vehicles.map((vehicle) => (
+                                    <TableRow key={vehicle._id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
+                                        <TableCell className="font-mono font-bold text-slate-700">{vehicle.registrationNumber}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className="rounded-lg text-[10px] font-bold uppercase">{vehicle.type}</Badge>
+                                        </TableCell>
+                                        <TableCell className="font-medium text-slate-900">{vehicle.capacity} Seats</TableCell>
+                                        <TableCell>
+                                            <Badge className={vehicle.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-orange-50 text-orange-700 border-orange-100'}>
+                                                {vehicle.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full ${parseInt(vehicle.health) > 80 ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                                                        style={{ width: vehicle.health }}
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] font-bold text-slate-500">{vehicle.health}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button size="sm" variant="ghost" className="rounded-lg hover:bg-slate-100">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
 
@@ -152,28 +185,42 @@ export default function TransportManagerDashboard() {
                     <Button variant="link" className="text-indigo-600 font-bold p-0 h-auto">View Optimization Map</Button>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-slate-50/30 border-0">
-                                <TableHead className="font-bold">System Route</TableHead>
-                                <TableHead className="font-bold">Terminals</TableHead>
-                                <TableHead className="font-bold">Stops</TableHead>
-                                <TableHead className="font-bold">Load</TableHead>
-                                <TableHead className="font-bold">Primary Vehicle</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {initialRoutes.map((route) => (
-                                <TableRow key={route.id} className="border-slate-50">
-                                    <TableCell className="font-bold">{route.name}</TableCell>
-                                    <TableCell className="text-xs text-slate-500">{route.startPoint} ⇄ {route.endPoint}</TableCell>
-                                    <TableCell className="font-medium text-slate-600">{route.stops}</TableCell>
-                                    <TableCell className="font-bold text-indigo-600">{route.students} Users</TableCell>
-                                    <TableCell><Badge variant="secondary" className="font-mono text-[10px]">{route.vehicle}</Badge></TableCell>
+                    {routes.length === 0 ? (
+                        <div className="p-12">
+                            <EmptyState
+                                icon={RouteIcon}
+                                title="No Routes Defined"
+                                description="Configure your transit lines to optimize student commute."
+                                actionLabel="Create Route"
+                                onAction={() => console.log("Open create route dialog")}
+                            />
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/30 border-0">
+                                    <TableHead className="font-bold">System Route</TableHead>
+                                    <TableHead className="font-bold">Terminals</TableHead>
+                                    <TableHead className="font-bold">Stops</TableHead>
+                                    <TableHead className="font-bold">Primary Vehicle</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {routes.map((route) => (
+                                    <TableRow key={route._id} className="border-slate-50">
+                                        <TableCell className="font-bold">{route.name}</TableCell>
+                                        <TableCell className="text-xs text-slate-500">{route.startPoint} ⇄ {route.endPoint}</TableCell>
+                                        <TableCell className="font-medium text-slate-600">{route.stops.length}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary" className="font-mono text-[10px]">
+                                                {route.vehicleId?.registrationNumber || 'Unassigned'}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
         </div>

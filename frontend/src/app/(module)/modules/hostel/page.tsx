@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,23 +9,46 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    Home, Building, DoorOpen, Users, Plus, BedDouble, ShieldCheck, Zap
+    Home, Building, DoorOpen, Users, Plus, BedDouble, ShieldCheck, Zap, Loader2
 } from "lucide-react";
-
-const mockHostels = [
-    { id: "1", name: "Alpha Residence (Boys)", type: "boys", rooms: 100, occupied: 85, warden: "Mr. Ramesh Gupta", health: "Good" },
-    { id: "2", name: "Beta Residence (Boys)", type: "boys", rooms: 80, occupied: 72, warden: "Mr. Sunil Kumar", health: "Maintenance" },
-    { id: "3", name: "Gamma Residence (Girls)", type: "girls", rooms: 120, occupied: 110, warden: "Mrs. Lakshmi Iyer", health: "Excel" },
-];
-
-const mockRooms = [
-    { id: "1", number: "101", floor: 1, capacity: 3, occupied: 3, type: "triple", rent: 5000 },
-    { id: "2", number: "102", floor: 1, capacity: 3, occupied: 2, type: "triple", rent: 5000 },
-    { id: "3", number: "103", floor: 1, capacity: 2, occupied: 2, type: "double", rent: 6000 },
-    { id: "4", number: "104", floor: 1, capacity: 1, occupied: 0, type: "single", rent: 8000 },
-];
+import { HostelService } from "@/lib/services/hostel.service";
+import { EmptyState } from "@/components/empty-state";
+import { toast } from "sonner";
 
 export default function WardenDashboard() {
+    const [hostels, setHostels] = useState<any[]>([]);
+    const [summary, setSummary] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                const [hostelRes, summaryRes] = await Promise.all([
+                    HostelService.getHostels(),
+                    HostelService.getSummary()
+                ]);
+                setHostels(hostelRes.data || []);
+                setSummary(summaryRes);
+            } catch (error) {
+                console.error("Failed to load hostel data:", error);
+                toast.error("Failed to load accommodation data");
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-orange-600 mb-4" />
+                <p className="text-slate-500 font-medium">Synchronizing inventory...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -48,7 +72,7 @@ export default function WardenDashboard() {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Blocks</p>
-                            <p className="text-2xl font-black text-slate-900">{mockHostels.length}</p>
+                            <p className="text-2xl font-black text-slate-900">{summary?.totalHostels || 0}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -59,7 +83,7 @@ export default function WardenDashboard() {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Inventory</p>
-                            <p className="text-2xl font-black text-slate-900">300 Rms</p>
+                            <p className="text-2xl font-black text-slate-900">{summary?.totalRooms || 0} Rms</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -70,7 +94,7 @@ export default function WardenDashboard() {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Available</p>
-                            <p className="text-2xl font-black text-slate-900">33 Beds</p>
+                            <p className="text-2xl font-black text-slate-900">{(summary?.totalCapacity - summary?.totalOccupancy) || 0} Beds</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -81,7 +105,7 @@ export default function WardenDashboard() {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Occupancy</p>
-                            <p className="text-2xl font-black text-slate-900">89%</p>
+                            <p className="text-2xl font-black text-slate-900">{Math.round(summary?.overallOccupancyPercentage || 0)}%</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -93,43 +117,58 @@ export default function WardenDashboard() {
                         <CardTitle className="text-lg font-bold">Facility Audit</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-slate-50/20 border-0">
-                                    <TableHead className="font-bold">Residence Block</TableHead>
-                                    <TableHead className="font-bold">Demographic</TableHead>
-                                    <TableHead className="font-bold">Room Count</TableHead>
-                                    <TableHead className="font-bold">Utilization</TableHead>
-                                    <TableHead className="font-bold">Health</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {mockHostels.map((hostel) => (
-                                    <TableRow key={hostel.id} className="border-slate-50">
-                                        <TableCell className="font-bold text-slate-900">{hostel.name}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="rounded-lg uppercase text-[10px] font-bold border-slate-200">
-                                                {hostel.type}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="font-medium text-slate-600">{hostel.rooms}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-blue-600" style={{ width: `${(hostel.occupied / hostel.rooms) * 100}%` }} />
-                                                </div>
-                                                <span className="text-xs font-bold text-slate-500">{hostel.occupied}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className={hostel.health === 'Good' || hostel.health === 'Excel' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-orange-50 text-orange-700 border-orange-100'}>
-                                                {hostel.health}
-                                            </Badge>
-                                        </TableCell>
+                        {hostels.length === 0 ? (
+                            <div className="p-12">
+                                <EmptyState
+                                    icon={Building}
+                                    title="No Residence Blocks"
+                                    description="You haven't added any hostel buildings yet. Register your first block to start managing accommodations."
+                                    actionLabel="Add Residence Block"
+                                    onAction={() => console.log("Open add hostel dialog")}
+                                />
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-slate-50/20 border-0">
+                                        <TableHead className="font-bold">Residence Block</TableHead>
+                                        <TableHead className="font-bold">Demographic</TableHead>
+                                        <TableHead className="font-bold">Room Count</TableHead>
+                                        <TableHead className="font-bold">Utilization</TableHead>
+                                        <TableHead className="font-bold">Health</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {hostels.map((hostel) => {
+                                        const detail = summary?.hostelDetails?.find((d: any) => d.hostelId === hostel._id);
+                                        return (
+                                            <TableRow key={hostel._id} className="border-slate-50">
+                                                <TableCell className="font-bold text-slate-900">{hostel.name}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="rounded-lg uppercase text-[10px] font-bold border-slate-200">
+                                                        {hostel.type}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="font-medium text-slate-600">{detail?.totalRooms || 0}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-blue-600" style={{ width: `${detail?.occupancyPercentage || 0}%` }} />
+                                                        </div>
+                                                        <span className="text-xs font-bold text-slate-500">{detail?.occupancy || 0}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">
+                                                        Operational
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -139,22 +178,24 @@ export default function WardenDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            <div className="flex gap-4 p-4 bg-red-50 rounded-xl border border-red-100">
-                                <div className="p-2 bg-white rounded-lg shadow-sm">
-                                    <ShieldCheck className="h-5 w-5 text-red-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-bold text-red-900">Fire Safety Audit</p>
-                                    <p className="text-xs text-red-700 mt-0.5">Block B inspection overdue by 2 days.</p>
-                                </div>
-                            </div>
                             <div className="flex gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
                                 <div className="p-2 bg-white rounded-lg shadow-sm">
                                     <Users className="h-5 w-5 text-blue-600" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-blue-900">Pending Allocations</p>
-                                    <p className="text-xs text-blue-700 mt-0.5">14 Freshman waitlisted for Block A.</p>
+                                    <p className="text-sm font-bold text-blue-900">Allocation Status</p>
+                                    <p className="text-xs text-blue-700 mt-0.5">
+                                        {summary?.totalCapacity - summary?.totalOccupancy} seats available for new residents.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="p-2 bg-white rounded-lg shadow-sm">
+                                    <ShieldCheck className="h-5 w-5 text-slate-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-900">Safety Compliance</p>
+                                    <p className="text-xs text-slate-700 mt-0.5">All blocks certified healthy.</p>
                                 </div>
                             </div>
                         </div>

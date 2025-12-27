@@ -13,27 +13,42 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PlacementService } from "@/lib/services/placement.service";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 
 export default function PlacementOfficerDashboard() {
     const [jobs, setJobs] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function loadJobs() {
+        async function loadData() {
             try {
                 setLoading(true);
-                const jobRes = await PlacementService.getAllJobs();
+                const [jobRes, statsRes] = await Promise.all([
+                    PlacementService.getAllJobs(),
+                    PlacementService.getStats()
+                ]);
                 setJobs(jobRes.data || []);
+                setStats(statsRes);
             } catch (error) {
-                console.error("Failed to load jobs:", error);
+                console.error("Failed to load placement data:", error);
                 toast.error("Failed to load recruitment data");
             } finally {
                 setLoading(false);
             }
         }
-        loadJobs();
+        loadData();
     }, []);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-4" />
+                <p className="text-slate-500 font-medium">Analyzing corporate pipeline...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -56,7 +71,7 @@ export default function PlacementOfficerDashboard() {
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="text-sm font-bold text-indigo-600 uppercase tracking-widest">Active Partner Pipeline</p>
-                                <p className="text-3xl font-black text-slate-900 mt-1">{jobs.length}</p>
+                                <p className="text-3xl font-black text-slate-900 mt-1">{stats?.activeJobPostings || 0}</p>
                             </div>
                             <div className="p-3 bg-white rounded-xl shadow-sm">
                                 <Building2 className="h-6 w-6 text-indigo-500" />
@@ -64,7 +79,7 @@ export default function PlacementOfficerDashboard() {
                         </div>
                         <div className="flex items-center gap-1 mt-4 text-emerald-600 font-bold text-xs uppercase">
                             <TrendingUp className="h-3 w-3" />
-                            +4 New this week
+                            {stats?.totalJobPostings || 0} Total Postings
                         </div>
                     </CardContent>
                 </Card>
@@ -73,7 +88,7 @@ export default function PlacementOfficerDashboard() {
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="text-sm font-bold text-blue-600 uppercase tracking-widest">Total Applications</p>
-                                <p className="text-3xl font-black text-slate-900 mt-1">1,248</p>
+                                <p className="text-3xl font-black text-slate-900 mt-1">{stats?.totalApplications || 0}</p>
                             </div>
                             <div className="p-3 bg-white rounded-xl shadow-sm">
                                 <Users className="h-6 w-6 text-blue-500" />
@@ -86,7 +101,7 @@ export default function PlacementOfficerDashboard() {
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest">Placements Secured</p>
-                                <p className="text-3xl font-black text-slate-900 mt-1">422</p>
+                                <p className="text-3xl font-black text-slate-900 mt-1">{stats?.statusBreakdown?.Placed || 0}</p>
                             </div>
                             <div className="p-3 bg-white rounded-xl shadow-sm">
                                 <Briefcase className="h-6 w-6 text-emerald-500" />
@@ -107,8 +122,16 @@ export default function PlacementOfficerDashboard() {
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    {loading ? (
-                        <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>
+                    {jobs.length === 0 ? (
+                        <div className="p-12">
+                            <EmptyState
+                                icon={Briefcase}
+                                title="No Recruitment Drives"
+                                description="You haven't launched any placement drives yet. Start by inviting corporate partners."
+                                actionLabel="Launch Drive"
+                                onAction={() => console.log("Open launch drive dialog")}
+                            />
+                        </div>
                     ) : (
                         <Table>
                             <TableHeader>
@@ -122,9 +145,7 @@ export default function PlacementOfficerDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {jobs.length === 0 ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center py-20 text-slate-500 italic">No recruitment data available.</TableCell></TableRow>
-                                ) : jobs.map((job) => (
+                                {jobs.map((job) => (
                                     <TableRow key={job._id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
                                         <TableCell>
                                             <div className="flex items-center gap-3">

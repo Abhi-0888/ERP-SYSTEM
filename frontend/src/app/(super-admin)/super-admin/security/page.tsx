@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,43 +10,84 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    ShieldAlert, Activity, FileSearch, ShieldCheck,
-    Terminal, Lock, Laptop, Globe, AlertCircle, RefreshCw,
+    ShieldAlert, Activity, Lock, Search, AlertTriangle, FileText, X,
+    Terminal, Laptop, Globe, AlertCircle, RefreshCw, FileSearch, ShieldCheck,
     Filter, Download, Trash2, Ban
 } from "lucide-react";
-import api from "@/lib/api";
 import { toast } from "sonner";
+import { SuperAdminService } from "@/lib/services/super-admin.service";
+import { UniversityService } from "@/lib/services/university.service";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function SecurityCenterPage() {
     const [activeTab, setActiveTab] = useState("audit");
     const [loading, setLoading] = useState(true);
-    const [logs, setLogs] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>({
+        totalLogs: 0,
+        recentAlerts: [],
+        failedLogins: 0,
+        threatLevel: 'Low',
+        failedVectors: [],
+        sensitiveActions: []
+    });
+    const [universities, setUniversities] = useState<any[]>([]);
+    const [sessions, setSessions] = useState<any[]>([]);
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+    const searchParams = useSearchParams();
+    const userIdFilter = searchParams.get('userId');
+    const router = useRouter();
 
     useEffect(() => {
-        const fetchLogs = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                const res = await api.get('/audit');
-                setLogs(res.data);
+                const [statsRes, eventsRes, sessionsRes, auditRes] = await Promise.all([
+                    SuperAdminService.getSecurityStats(),
+                    SuperAdminService.getSecurityEvents(),
+                    SuperAdminService.getActiveSessions(),
+                    SuperAdminService.getAuditLogs(1, 50, userIdFilter || "")
+                ]);
+
+                setStats({
+                    ...statsRes.data,
+                    failedVectors: eventsRes.data.failedVectors,
+                    sensitiveActions: eventsRes.data.sensitiveActions
+                });
+                setSessions(sessionsRes.data);
+                setAuditLogs(auditRes.data.logs || []); // Store logs
+
+                if (userIdFilter) {
+                    setActiveTab("audit");
+                }
             } catch (error) {
-                toast.error("Failed to load forensic audit trail");
+                toast.error("Failed to load security intelligence");
             } finally {
                 setLoading(false);
             }
         };
-        fetchLogs();
-    }, []);
+        fetchData();
+    }, [userIdFilter]);
+
+    const clearFilter = () => {
+        router.push('/super-admin/security');
+    };
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Audit & Security Center</h1>
-                    <p className="text-slate-500 mt-1">Platform forensics, immutable logging, and session governance.</p>
+                    <h1 className="text-3xl font-bold text-slate-900">Security Command Center</h1>
+                    <p className="text-slate-500 mt-1">Real-time threat monitoring and audit forensics.</p>
                 </div>
                 <div className="flex gap-2">
+                    {userIdFilter && (
+                        <Button variant="outline" className="rounded-xl bg-amber-50 text-amber-600 border-amber-200" onClick={clearFilter}>
+                            <X className="h-4 w-4 mr-2" /> Clear Filter: {userIdFilter.substring(0, 8)}...
+                        </Button>
+                    )}
                     <Button variant="outline" className="rounded-xl bg-white">
-                        <Download className="h-4 w-4 mr-2" />Export Logs (CSV)
+                        <FileText className="h-4 w-4 mr-2" />Export Report
                     </Button>
                     <Button className="rounded-xl bg-slate-900 text-white shadow-lg">
                         <Terminal className="h-4 w-4 mr-2" />Security CLI
@@ -89,40 +130,43 @@ export default function SecurityCenterPage() {
                         <CardContent className="p-0">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-slate-50/10 border-0">
-                                        <TableHead className="font-bold text-slate-600 h-12">Timestamp</TableHead>
-                                        <TableHead className="font-bold text-slate-600 h-12">Identity</TableHead>
-                                        <TableHead className="font-bold text-slate-600 h-12">Scope</TableHead>
-                                        <TableHead className="font-bold text-slate-600 h-12">Vector/Module</TableHead>
-                                        <TableHead className="font-bold text-slate-600 h-12">Payload Action</TableHead>
-                                        <TableHead className="font-bold text-slate-600 h-12">Severity</TableHead>
+                                    <TableRow className="bg-slate-50/50">
+                                        <TableHead>Timestamp</TableHead>
+                                        <TableHead>Actor</TableHead>
+                                        <TableHead>Action</TableHead>
+                                        <TableHead>Module</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {[
-                                        { time: "2025-12-20T13:42:01Z", user: "SA_ADMIN_01", scope: "PLATFORM", module: "AUTH", action: "JWT_REFRESH", severity: "INFO" },
-                                        { time: "2025-12-20T13:41:45Z", user: "UNI_ADMIN_SRM", scope: "SRM_AP", module: "UNIVERSITY", action: "CONFIG_UPDATE", severity: "WARNING" },
-                                        { time: "2025-12-20T13:40:12Z", user: "REGISTRAR_XYZ", scope: "XYZ_UNI", module: "REPORTS", action: "BULK_EXPORT", severity: "WARNING" },
-                                        { time: "2025-12-20T13:38:55Z", user: "SYSTEM", scope: "GLOBAL", module: "AUDIT", action: "LOG_COMPRESSION", severity: "INFO" },
-                                        { time: "2025-12-20T13:35:20Z", user: "UNKNOWN", scope: "IP_BLOCKED", module: "WAF", action: "SQL_INJECTION_BLOCK", severity: "CRITICAL" },
-                                    ].map((log, i) => (
-                                        <TableRow key={i} className="hover:bg-slate-50/50 transition-colors border-slate-50 font-mono text-[11px]">
-                                            <TableCell className="text-slate-400">{log.time}</TableCell>
-                                            <TableCell className="font-bold text-slate-900">{log.user}</TableCell>
-                                            <TableCell><Badge variant="outline" className="text-[9px] uppercase">{log.scope}</Badge></TableCell>
-                                            <TableCell className="text-blue-600 font-bold">{log.module}</TableCell>
-                                            <TableCell className="text-slate-700">{log.action}</TableCell>
-                                            <TableCell>
-                                                <Badge className={
-                                                    log.severity === 'CRITICAL' ? 'bg-red-500' :
-                                                        log.severity === 'WARNING' ? 'bg-orange-500' :
-                                                            'bg-blue-500'
-                                                }>
-                                                    {log.severity}
-                                                </Badge>
+                                    {auditLogs.length > 0 ? (
+                                        auditLogs.map((log: any) => (
+                                            <TableRow key={log._id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
+                                                <TableCell className="font-mono text-xs text-slate-500">
+                                                    {new Date(log.createdAt).toLocaleString()}
+                                                </TableCell>
+                                                <TableCell className="font-medium text-slate-900">
+                                                    {log.username || 'SYSTEM'}
+                                                    <div className="text-[10px] text-slate-400">{log.universityId || 'Global'}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="bg-slate-50">{log.action}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-slate-500">{log.module}</TableCell>
+                                                <TableCell>
+                                                    <Badge className={log.severity === 'Info' ? 'bg-blue-500' : 'bg-orange-500'}>
+                                                        {log.severity || 'Info'}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-8 text-slate-400">
+                                                No audit logs found {userIdFilter ? 'for this user' : ''}.
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>
@@ -141,22 +185,22 @@ export default function SecurityCenterPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-6 space-y-4 flex-1">
-                            {[
-                                { vector: "Brute Force Attempt", count: 42, target: "srm_admin_portal", status: "BLOCKED" },
-                                { vector: "Invalid API Key", count: 128, target: "gateway_v2", status: "THROTTLED" },
-                                { vector: "Expired Token Usage", count: 15, target: "session_manager", status: "LOGGED" },
-                            ].map((ev, i) => (
-                                <div key={i} className="flex items-start justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                                    <div>
-                                        <p className="font-bold text-slate-900">{ev.vector}</p>
-                                        <p className="text-xs text-slate-400 mt-1">Target: {ev.target}</p>
+                            {stats.failedVectors && stats.failedVectors.length > 0 ? (
+                                stats.failedVectors.map((ev: any, i: number) => (
+                                    <div key={i} className="flex items-start justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                        <div>
+                                            <p className="font-bold text-slate-900">{ev.vector}</p>
+                                            <p className="text-xs text-slate-400 mt-1">Target: {ev.target}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-lg font-black text-red-600">{ev.count}</p>
+                                            <Badge variant="outline" className="text-[10px] bg-white">{ev.status}</Badge>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-black text-red-600">{ev.count}</p>
-                                        <Badge variant="outline" className="text-[10px] bg-white">{ev.status}</Badge>
-                                    </div>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <div className="text-center py-8 text-slate-400">No recent failed vectors.</div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -171,33 +215,29 @@ export default function SecurityCenterPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-6 space-y-4 flex-1">
-                            {[
-                                { action: "Permission Override Created", user: "SA_ALEX", delta: "+SUPER_USER", time: "2m ago" },
-                                { action: "Bulk DB Export Ignited", user: "UNI_DB_MANAGER", delta: "TABLE_USERS", time: "15m ago" },
-                                { action: "Global Config Mutation", user: "SYSTEM_ROOOT", delta: "PLAN_UPGRADE", time: "1h ago" },
-                            ].map((ev, i) => (
-                                <div key={i} className="flex items-start justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm">
-                                    <div>
-                                        <p className="font-bold text-slate-900">{ev.action}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Badge className="bg-slate-200 text-slate-700 border-0 text-[9px] uppercase">{ev.user}</Badge>
-                                            <span className="text-[10px] text-slate-400">Changed: {ev.delta}</span>
+                            {stats.sensitiveActions && stats.sensitiveActions.length > 0 ? (
+                                stats.sensitiveActions.map((ev: any, i: number) => (
+                                    <div key={i} className="flex items-start justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm">
+                                        <div>
+                                            <p className="font-bold text-slate-900">{ev.action}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <Badge className="bg-slate-200 text-slate-700 border-0 text-[9px] uppercase">{ev.user}</Badge>
+                                                <span className="text-[10px] text-slate-400">Changed: {ev.delta}</span>
+                                            </div>
                                         </div>
+                                        <p className="text-[10px] font-bold text-slate-400">{new Date(ev.time).toLocaleTimeString()}</p>
                                     </div>
-                                    <p className="text-[10px] font-bold text-slate-400">{ev.time}</p>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <div className="text-center py-8 text-slate-400">No sensitive actions captured.</div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 <TabsContent value="sessions" className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[
-                            { uni: "SRM Institute of Science", active: 142, peak: 250, status: "Normal" },
-                            { uni: "Vellore Tech", active: 210, peak: 220, status: "Peak" },
-                            { uni: "Amrita University", active: 89, peak: 150, status: "Normal" },
-                        ].map((s, i) => (
+                        {sessions.map((s: any, i) => (
                             <Card key={i} className="border-0 shadow-sm border border-slate-100 rounded-2xl p-6 hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start">
                                     <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
@@ -215,7 +255,7 @@ export default function SecurityCenterPage() {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase">Daily Peak</p>
-                                        <p className="text-xl font-black text-slate-600">{s.peak}</p>
+                                        <p className="text-xl font-black text-slate-600">-</p>
                                     </div>
                                 </div>
                                 <div className="mt-6 pt-4 border-t border-slate-50 flex gap-2">
@@ -224,6 +264,11 @@ export default function SecurityCenterPage() {
                                 </div>
                             </Card>
                         ))}
+                        {sessions.length === 0 && (
+                            <div className="col-span-3 p-12 text-center text-slate-400 border border-dashed rounded-2xl">
+                                No active university sessions detected.
+                            </div>
+                        )}
                     </div>
 
                     <Card className="border-0 shadow-sm rounded-2xl overflow-hidden border border-slate-100">
@@ -236,38 +281,11 @@ export default function SecurityCenterPage() {
                         <CardContent className="p-0">
                             <Table>
                                 <TableBody>
-                                    {[
-                                        { user: "SuperAdmin_01", device: "MacBook Pro / Chrome", location: "Singapore", ip: "13.250.x.x", time: "Now" },
-                                        { user: "UniAdmin_Srm_Head", device: "Windows 11 / Edge", location: "Chennai, India", ip: "182.74.x.x", time: "14m ago" },
-                                        { user: "Global_Support_Lead", device: "Ubuntu / Firefox", location: "London, UK", ip: "82.162.x.x", time: "1h ago" },
-                                    ].map((auth, i) => (
-                                        <TableRow key={i} className="border-slate-50 font-outfit">
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white text-[10px] font-black">
-                                                        {auth.user.charAt(0)}
-                                                    </div>
-                                                    <span className="font-bold text-slate-900">{auth.user}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-slate-500 text-xs">
-                                                <div className="flex items-center gap-1">
-                                                    <Laptop className="h-3 w-3" /> {auth.device}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-slate-500 text-xs text-center">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <Globe className="h-3 w-3" /> {auth.location}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-slate-400 font-mono text-[10px]">{auth.ip}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">
-                                                    {auth.time}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-6 text-slate-400">
+                                            No high-level authentications recorded recently.
+                                        </TableCell>
+                                    </TableRow>
                                 </TableBody>
                             </Table>
                         </CardContent>

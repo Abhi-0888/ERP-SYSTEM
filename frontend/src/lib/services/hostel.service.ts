@@ -24,5 +24,9 @@ export const HostelService = {
     getOccupancyReport: async (hostelId: string) => {
         const response = await api.get(`/hostel/reports/occupancy/${hostelId}`);
         return response.data;
+    },
+    getSummary: async () => {
+        const response = await api.get('/hostel/reports/summary');
+        return response.data;
     }
 };

@@ -15,15 +15,22 @@ export class AuthService {
     ) { }
 
     async validateUser(username: string, password: string): Promise<any> {
+        console.log(`[AuthDebug] Validating user: ${username}`);
         const user = await this.userModel.findOne({
             $or: [{ username }, { email: username }],
             isActive: true
         });
+
+        console.log(`[AuthDebug] User found in DB: ${user ? user.username : 'NULL'}`);
+        if (user) console.log(`[AuthDebug] Stored Hash: ${user.password.substring(0, 10)}...`);
+
         if (user && await bcrypt.compare(password, user.password)) {
+            console.log(`[AuthDebug] Password MATCH`);
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { password, ...result } = user.toObject();
             return result;
         }
+        console.log(`[AuthDebug] Password MISMATCH or User NULL`);
         return null;
     }
 

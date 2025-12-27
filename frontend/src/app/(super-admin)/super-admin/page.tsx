@@ -8,6 +8,7 @@ import {
     AlertTriangle, LifeBuoy, Zap, ShieldCheck
 } from "lucide-react";
 import api from "@/lib/api";
+import { SuperAdminService } from "@/lib/services/super-admin.service";
 
 function StatCard({
     title,
@@ -69,21 +70,19 @@ export default function SuperAdminDashboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // In a real scenario, we'd have a single aggregator endpoint /super-admin/stats
-                // For now, we simulate or fetch from basic endpoints
-                const response = await api.get('/super-admin/stats/dashboard');
-                const data = response.data;
+                const response = await SuperAdminService.getDashboardStats();
+                const data = response.data || response;
 
                 setStats({
                     totalUniversities: data.totalUniversities.toString(),
                     activeUniversities: data.activeUniversities.toString(),
                     totalUsers: data.totalUsers.toString(),
                     activeSessions: data.activeSessions.toString(),
-                    systemStatus: data.systemStatus,
+                    systemStatus: data.systemStatus || "Healthy",
                     failedLogins: data.failedLogins.toString(),
-                    permissionOverrides: data.permissionOverrides.toString(),
-                    auditAlerts: data.auditAlerts.toString(),
-                    pendingTickets: data.pendingTickets.toString()
+                    permissionOverrides: data.permissionOverrides?.toString() || "0",
+                    auditAlerts: data.auditAlerts?.toString() || "0",
+                    pendingTickets: data.pendingTickets?.toString() || "0"
                 });
             } catch (error) {
                 console.error("Failed to fetch Super Admin stats", error);

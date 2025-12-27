@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +23,18 @@ export default function GlobalUsersPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     const fetchUsers = async () => {
         setLoading(true);
         try {
             const res = await api.get('/users');
-            setUsers(res.data || []);
+            // Map backend response to flatten university name
+            const mappedUsers = (res.data || []).map((u: any) => ({
+                ...u,
+                universityName: u.universityId?.name
+            }));
+            setUsers(mappedUsers);
         } catch (error) {
             console.error("Failed to fetch global users", error);
             toast.error("Failed to load security user records");
@@ -106,21 +113,23 @@ export default function GlobalUsersPage() {
                     <CardContent className="p-6">
                         <AlertTriangle className="h-8 w-8 text-orange-500 mb-2 opacity-20 absolute -right-2 -bottom-2 scale-150 rotate-12" />
                         <p className="text-sm font-bold text-orange-600 uppercase tracking-wider">Risk Flagged</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1">14</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1">0</p>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm bg-emerald-50/50 border border-emerald-100 overflow-hidden relative">
                     <CardContent className="p-6">
                         <ShieldAlert className="h-8 w-8 text-emerald-500 mb-2 opacity-20 absolute -right-2 -bottom-2 scale-150 rotate-12" />
                         <p className="text-sm font-bold text-emerald-600 uppercase tracking-wider">Active Sessions</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1">284</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1">
+                            {users.filter(u => u.lastLogin && new Date(u.lastLogin) > new Date(Date.now() - 86400000)).length}
+                        </p>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm bg-red-50/50 border border-red-100 overflow-hidden relative">
                     <CardContent className="p-6">
                         <Ban className="h-8 w-8 text-red-500 mb-2 opacity-20 absolute -right-2 -bottom-2 scale-150 rotate-12" />
                         <p className="text-sm font-bold text-red-600 uppercase tracking-wider">Revoked Today</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1">2</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1">0</p>
                     </CardContent>
                 </Card>
             </div>
@@ -202,15 +211,9 @@ export default function GlobalUsersPage() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex gap-1">
-                                                {Math.random() > 0.8 ? (
-                                                    <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-[10px] px-1.5 py-0 hover:bg-orange-200 transition-colors">
-                                                        GEO-LIFT
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] px-1.5 py-0">
-                                                        SECURE
-                                                    </Badge>
-                                                )}
+                                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] px-1.5 py-0">
+                                                    SECURE
+                                                </Badge>
                                             </div>
                                         </TableCell>
                                         <TableCell>
@@ -227,7 +230,7 @@ export default function GlobalUsersPage() {
                                                     <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => handleResetPassword(user._id || user.id)}>
                                                         <Key className="h-4 w-4 text-blue-500" /> Reset Credentials
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer">
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => router.push(`/super-admin/security?userId=${user._id || user.id}`)}>
                                                         <History className="h-4 w-4 text-slate-500" /> Access Audit Trail
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator className="bg-slate-50" />

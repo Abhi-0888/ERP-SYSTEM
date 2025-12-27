@@ -19,7 +19,7 @@ export class UserService {
 
     async findAll(universityId?: string): Promise<User[]> {
         const filter = universityId ? { universityId } : {};
-        return this.userModel.find(filter).select('-password').exec();
+        return this.userModel.find(filter).select('-password').populate('universityId', 'name').exec();
     }
 
     async findOne(id: string): Promise<User> {

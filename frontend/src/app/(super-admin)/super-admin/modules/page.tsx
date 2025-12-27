@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { UniversityService } from "@/lib/services/university.service";
+import { SuperAdminService } from "@/lib/services/super-admin.service";
 
 const MODULES = [
     { id: "library", name: "Library Management", icon: Library, color: "text-blue-500", bg: "bg-blue-50" },
@@ -26,12 +27,17 @@ export default function ModuleFlagsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [universities, setUniversities] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState<any>({});
 
-    const fetchUniversities = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const data = await UniversityService.getAll();
-            setUniversities(data);
+            const [univData, statsData] = await Promise.all([
+                UniversityService.getAll(),
+                SuperAdminService.getModuleStats()
+            ]);
+            setUniversities(univData);
+            setStats(statsData.data);
         } catch (error) {
             toast.error("Failed to load tenant modules base");
         } finally {
@@ -40,7 +46,7 @@ export default function ModuleFlagsPage() {
     };
 
     useEffect(() => {
-        fetchUniversities();
+        fetchData();
     }, []);
 
     const handleToggleModule = async (univId: string, moduleName: string, currentlyEnabled: boolean) => {
@@ -53,11 +59,15 @@ export default function ModuleFlagsPage() {
             : [...enabledModules, moduleName];
 
         try {
+            // Optimistic update
+            const updatedUniv = { ...univ, enabledModules: newModules };
+            setUniversities(prev => prev.map(u => u._id === univId ? updatedUniv : u));
+
             await UniversityService.update(univId, { enabledModules: newModules });
             toast.success(`${moduleName} ${currentlyEnabled ? 'disabled' : 'enabled'} for tenant.`);
-            fetchUniversities();
         } catch (error) {
             toast.error("Module configuration failed");
+            fetchData(); // Revert on failure
         }
     };
 
@@ -86,17 +96,15 @@ export default function ModuleFlagsPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input
                                 placeholder="Search university..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-10 h-10 rounded-xl bg-white border-slate-200"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        {[
-                            { name: "SRM Institute of Science", code: "SRM-AP", modules: ["library", "hostel", "placement", "ai"] },
-                            { name: "Vellore Tech", code: "VIT-V", modules: ["library", "placement"] },
-                            { name: "Amrita University", code: "AMU-K", modules: ["library", "hostel", "ai"] },
-                        ].map((uni, idx) => (
+                        {universities.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase())).map((uni, idx) => (
                             <Card key={idx} className="border-0 shadow-sm rounded-3xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
                                 <CardHeader className="bg-slate-50/50 flex flex-row items-center justify-between px-6 py-4">
                                     <div className="flex items-center gap-3">
@@ -109,12 +117,12 @@ export default function ModuleFlagsPage() {
                                         </div>
                                     </div>
                                     <Badge variant="outline" className="bg-white text-slate-600 border-slate-200">
-                                        {uni.modules.length} Modules Active
+                                        {(uni.enabledModules || []).length} Modules Active
                                     </Badge>
                                 </CardHeader>
                                 <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {MODULES.map((mod) => {
-                                        const isActive = uni.modules.includes(mod.id);
+                                        const isActive = (uni.enabledModules || []).includes(mod.id);
                                         const Icon = mod.icon;
                                         return (
                                             <div key={mod.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm relative overflow-hidden group">
@@ -124,13 +132,22 @@ export default function ModuleFlagsPage() {
                                                     </div>
                                                     <span className="text-xs font-bold text-slate-700">{mod.name}</span>
                                                 </div>
-                                                <Switch checked={isActive} className="scale-75 z-10" />
+                                                <Switch
+                                                    checked={isActive}
+                                                    onCheckedChange={() => handleToggleModule(uni._id, mod.id, isActive)}
+                                                    className="scale-75 z-10"
+                                                />
                                             </div>
                                         )
                                     })}
                                 </CardContent>
                             </Card>
                         ))}
+                        {universities.length === 0 && !loading && (
+                            <div className="p-12 text-center text-slate-400 border border-dashed rounded-3xl">
+                                <p>No tenants found to configure.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 

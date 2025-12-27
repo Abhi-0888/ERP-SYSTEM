@@ -26,7 +26,11 @@ export default function SupportHubPage() {
             try {
                 // Assuming /support/tickets exists or we simulate with a real-like call
                 const res = await api.get('/support/tickets');
-                setTickets(res.data);
+                const mappedTickets = (res.data || []).map((t: any) => ({
+                    ...t,
+                    universityName: t.universityId?.name
+                }));
+                setTickets(mappedTickets);
             } catch (error) {
                 toast.error("Failed to load global support queue");
             } finally {
@@ -79,20 +83,20 @@ export default function SupportHubPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                         <Card className="bg-blue-600 text-white border-0 rounded-2xl p-6 shadow-lg shadow-blue-100">
                             <p className="text-blue-100 font-bold text-xs uppercase tracking-tighter">Pending Critical</p>
-                            <h3 className="text-4xl font-black mt-2">12</h3>
+                            <h3 className="text-4xl font-black mt-2">{tickets.filter((t: any) => t.status === 'CRITICAL').length}</h3>
                         </Card>
                         <Card className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
                             <p className="text-slate-400 font-bold text-xs uppercase tracking-tighter">Avg Response</p>
-                            <h3 className="text-4xl font-black text-slate-900 mt-2">14<span className="text-sm font-medium text-slate-400 ml-1">min</span></h3>
+                            <h3 className="text-4xl font-black text-slate-900 mt-2">0<span className="text-sm font-medium text-slate-400 ml-1">min</span></h3>
                         </Card>
                         <Card className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
                             <p className="text-slate-400 font-bold text-xs uppercase tracking-tighter">Resolved Today</p>
-                            <h3 className="text-4xl font-black text-slate-900 mt-2">142</h3>
+                            <h3 className="text-4xl font-black text-slate-900 mt-2">0</h3>
                         </Card>
                         <Card className="bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl p-6 flex flex-col justify-center">
                             <div className="flex items-center gap-2">
                                 <CheckCircle2 className="h-5 w-5" />
-                                <span className="font-bold">SLA Compliance: 99.8%</span>
+                                <span className="font-bold">System Status: Nominal</span>
                             </div>
                         </Card>
                     </div>
@@ -109,35 +113,37 @@ export default function SupportHubPage() {
                         </div>
                         <CardContent className="p-0">
                             <div className="divide-y divide-slate-50">
-                                {[
-                                    { id: "T-8234", uni: "SRM AP", subject: "DB Connection timeouts in production", status: "CRITICAL", time: "5m ago" },
-                                    { id: "T-8235", uni: "Vellore Tech", subject: "Bulk user upload failing at 98%", status: "HIGH", time: "22m ago" },
-                                    { id: "T-8236", uni: "Amrita University", subject: "Request for white-labeling DNS change", status: "MEDIUM", time: "1h ago" },
-                                ].map((t, idx) => (
-                                    <div key={idx} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
-                                        <div className="flex items-start gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mt-1">
-                                                <MessageCircle className="h-5 w-5" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-mono text-xs font-bold text-slate-400">#{t.id}</span>
-                                                    <Badge className={
-                                                        t.status === 'CRITICAL' ? 'bg-red-500' :
-                                                            t.status === 'HIGH' ? 'bg-orange-500' :
-                                                                'bg-blue-500'
-                                                    }>{t.status}</Badge>
-                                                    <Badge variant="outline" className="text-[10px] bg-white border-slate-200">{t.uni}</Badge>
-                                                </div>
-                                                <h4 className="font-bold text-slate-900 mt-1">{t.subject}</h4>
-                                                <p className="text-xs text-slate-500 mt-0.5">Reported {t.time}</p>
-                                            </div>
-                                        </div>
-                                        <Button size="sm" className="rounded-xl bg-slate-900 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            Assign to Specialist
-                                        </Button>
+                                {tickets.length === 0 ? (
+                                    <div className="p-12 text-center text-slate-400">
+                                        <p>No pending support tickets found.</p>
                                     </div>
-                                ))}
+                                ) : (
+                                    tickets.map((t: any, idx) => (
+                                        <div key={idx} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mt-1">
+                                                    <MessageCircle className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono text-xs font-bold text-slate-400">#{t.id || '---'}</span>
+                                                        <Badge className={
+                                                            t.status === 'CRITICAL' ? 'bg-red-500' :
+                                                                t.status === 'HIGH' ? 'bg-orange-500' :
+                                                                    'bg-blue-500'
+                                                        }>{t.status}</Badge>
+                                                        <Badge variant="outline" className="text-[10px] bg-white border-slate-200">{t.universityName || 'Unknown'}</Badge>
+                                                    </div>
+                                                    <h4 className="font-bold text-slate-900 mt-1">{t.subject}</h4>
+                                                    <p className="text-xs text-slate-500 mt-0.5">Reported {new Date(t.createdAt).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            <Button size="sm" className="rounded-xl bg-slate-900 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                Assign to Specialist
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -218,23 +224,8 @@ export default function SupportHubPage() {
                                     <Badge variant="outline" className="text-[9px] uppercase">Logged</Badge>
                                 </CardHeader>
                                 <CardContent className="p-4 space-y-3">
-                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 relative group overflow-hidden">
-                                        <div className="relative z-10 flex justify-between items-center">
-                                            <div>
-                                                <p className="font-bold text-slate-800 text-xs">admin@srm.edu</p>
-                                                <p className="text-[10px] text-slate-500">Duration: 15m | Status: Expired</p>
-                                            </div>
-                                            <ExternalLink className="h-3 w-3 text-slate-300 group-hover:text-slate-900 cursor-pointer" />
-                                        </div>
-                                    </div>
-                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 relative group overflow-hidden">
-                                        <div className="relative z-10 flex justify-between items-center">
-                                            <div>
-                                                <p className="font-bold text-slate-800 text-xs">finance.vit@vit.edu</p>
-                                                <p className="text-[10px] text-slate-500">Duration: 30m | Status: Expired</p>
-                                            </div>
-                                            <ExternalLink className="h-3 w-3 text-slate-300 group-hover:text-slate-900 cursor-pointer" />
-                                        </div>
+                                    <div className="p-8 text-center text-slate-400">
+                                        <p className="text-xs">No recent impersonation sessions logged.</p>
                                     </div>
                                 </CardContent>
                             </Card>

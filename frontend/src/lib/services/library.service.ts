@@ -24,5 +24,9 @@ export const LibraryService = {
     returnBook: async (issueId: string) => {
         const response = await api.post(`/library/return/${issueId}`);
         return response.data;
+    },
+    getAvailabilityReport: async () => {
+        const response = await api.get('/library/reports/availability');
+        return response.data;
     }
 };

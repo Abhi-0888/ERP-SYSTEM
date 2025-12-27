@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import api from "@/lib/api";
 import { roleDisplayNames } from "@/lib/navigation";
+import { StatsService } from "@/lib/services/stats.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     Users, GraduationCap, BookOpen, Building2, TrendingUp, TrendingDown,
     Calendar, AlertCircle, CreditCard, ClipboardList, BarChart3,
-    ArrowRight, Download, Filter, Clock, MapPin, Loader2
+    ArrowRight, Download, Filter, Clock, MapPin, Loader2, Sparkles
 } from "lucide-react";
 
 // Stat Card Component
@@ -74,18 +75,14 @@ function AdminDashboard() {
     useEffect(() => {
         const fetchAdminStats = async () => {
             try {
-                const [studentRes, facultyRes, attendanceRes, feeRes] = await Promise.all([
-                    api.get('/students?limit=1'),
-                    api.get('/users?role=FACULTY&limit=1'),
-                    api.get('/attendance/reports/summary'),
-                    api.get('/fees/reports/summary')
-                ]);
+                const statsRes = await StatsService.getGlobalStats();
+                const data = statsRes.data || statsRes;
 
                 setStats({
-                    students: studentRes.data.pagination?.total || 1240,
-                    faculty: facultyRes.data.pagination?.total || 86,
-                    attendance: attendanceRes.data.averageAttendance ? `${attendanceRes.data.averageAttendance}%` : "94.2%",
-                    fees: feeRes.data.totalCollected ? `₹${(feeRes.data.totalCollected / 100000).toFixed(1)}L` : "₹42.8L"
+                    students: data.system?.students || 0,
+                    faculty: data.system?.faculty || 0,
+                    attendance: data.attendance?.average ? `${data.attendance.average}%` : "0%",
+                    fees: data.fees?.collection ? `₹${(data.fees.collection / 100000).toFixed(1)}L` : "₹0"
                 });
             } catch (error) {
                 console.error("Failed to fetch admin dashboard stats", error);

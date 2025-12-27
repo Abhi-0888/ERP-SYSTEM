@@ -14,10 +14,13 @@ import { FeeModule } from './modules/fee/fee.module';
 import { LibraryModule } from './modules/library/library.module';
 import { HostelModule } from './modules/hostel/hostel.module';
 import { PlacementModule } from './modules/placement/placement.module';
+import { TransportModule } from './modules/transport/transport.module';
+import { StatsModule } from './modules/stats/stats.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { SupportModule } from './modules/support/support.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AppController } from './app.controller';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -46,10 +49,13 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
         LibraryModule,
         HostelModule,
         PlacementModule,
+        TransportModule,
+        StatsModule,
         AuditModule,
         SettingsModule,
         SupportModule,
         OnboardingModule,
+        SuperAdminModule,
     ],
     controllers: [AppController],
     providers: [

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,25 +13,47 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
 import {
-    BookOpen, Search, Plus, Filter, Download, Library, BookMarked, AlertCircle
+    BookOpen, Search, Plus, Filter, Download, Library, BookMarked, AlertCircle, Loader2
 } from "lucide-react";
-
-const mockBooks = [
-    { id: "1", title: "Introduction to Algorithms", author: "Thomas H. Cormen", isbn: "978-0262033848", category: "Computer Science", total: 10, available: 6 },
-    { id: "2", title: "Clean Code", author: "Robert C. Martin", isbn: "978-0132350884", category: "Software Engineering", total: 8, available: 3 },
-    { id: "3", title: "Design Patterns", author: "Gang of Four", isbn: "978-0201633610", category: "Software Engineering", total: 5, available: 2 },
-    { id: "4", title: "Database Systems", author: "Silberschatz", isbn: "978-0073523323", category: "Databases", total: 12, available: 8 },
-    { id: "5", title: "Computer Networks", author: "Tanenbaum", isbn: "978-0132126953", category: "Networking", total: 7, available: 4 },
-];
+import { LibraryService } from "@/lib/services/library.service";
+import { EmptyState } from "@/components/empty-state";
+import { toast } from "sonner";
 
 export default function LibrarianDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [books, setBooks] = useState<any[]>([]);
+    const [report, setReport] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-    const filteredBooks = mockBooks.filter(
-        (b) => b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            b.author.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                const [booksRes, reportRes] = await Promise.all([
+                    LibraryService.getBooks({ search: searchQuery }),
+                    LibraryService.getAvailabilityReport()
+                ]);
+                setBooks(booksRes.data || []);
+                setReport(reportRes);
+            } catch (error) {
+                console.error("Failed to load library data:", error);
+                toast.error("Failed to load repository data");
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
+    }, [searchQuery]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+                <p className="text-slate-500 font-medium">Indexing repository...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -92,28 +114,30 @@ export default function LibrarianDashboard() {
                     <CardContent className="p-6">
                         <Library className="h-10 w-10 text-blue-500 mb-2 opacity-10 absolute -right-2 -bottom-2 scale-150 rotate-12" />
                         <p className="text-sm font-bold text-blue-600 uppercase tracking-widest">Repository Size</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1">{mockBooks.reduce((a, b) => a + b.total, 0)}</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1">{report?.summary?.totalCopies || 0}</p>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm bg-emerald-50/50 border border-emerald-100 relative overflow-hidden">
                     <CardContent className="p-6">
                         <BookOpen className="h-10 w-10 text-emerald-500 mb-2 opacity-10 absolute -right-2 -bottom-2 scale-150 rotate-12" />
                         <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest">Ready for Issue</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1">{mockBooks.reduce((a, b) => a + b.available, 0)}</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1">{report?.summary?.availableCopies || 0}</p>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm bg-orange-50/50 border border-orange-100 relative overflow-hidden">
                     <CardContent className="p-6">
                         <BookMarked className="h-10 w-10 text-orange-500 mb-2 opacity-10 absolute -right-2 -bottom-2 scale-150 rotate-12" />
                         <p className="text-sm font-bold text-orange-600 uppercase tracking-widest">Active Circulation</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1">{mockBooks.reduce((a, b) => a + (b.total - b.available), 0)}</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1">{report?.summary?.issuedCopies || 0}</p>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm bg-red-50/50 border border-red-100 relative overflow-hidden">
                     <CardContent className="p-6">
                         <AlertCircle className="h-10 w-10 text-red-500 mb-2 opacity-10 absolute -right-2 -bottom-2 scale-150 rotate-12" />
-                        <p className="text-sm font-bold text-red-600 uppercase tracking-widest">Delinquent Returns</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1">12</p>
+                        <p className="text-sm font-bold text-red-600 uppercase tracking-widest">Inventory Health</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1">
+                            {report?.summary?.totalBooks > 0 ? "Good" : "N/A"}
+                        </p>
                     </CardContent>
                 </Card>
             </div>
@@ -134,44 +158,56 @@ export default function LibrarianDashboard() {
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-slate-50/30 border-0">
-                                <TableHead className="font-bold h-12">Resource Title</TableHead>
-                                <TableHead className="font-bold h-12">Contributor</TableHead>
-                                <TableHead className="font-bold h-12">Identifier</TableHead>
-                                <TableHead className="font-bold h-12">Genre</TableHead>
-                                <TableHead className="font-bold h-12">Liquidity</TableHead>
-                                <TableHead className="font-bold h-12 text-right">Ops</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredBooks.map((book) => (
-                                <TableRow key={book.id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
-                                    <TableCell className="font-bold text-slate-900">{book.title}</TableCell>
-                                    <TableCell className="text-slate-600">{book.author}</TableCell>
-                                    <TableCell className="font-mono text-xs text-slate-400">{book.isbn}</TableCell>
-                                    <TableCell><Badge variant="outline" className="rounded-lg bg-slate-50 border-slate-200 text-slate-600">{book.category}</Badge></TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full ${book.available > 3 ? 'bg-emerald-500' : book.available > 0 ? 'bg-orange-500' : 'bg-red-500'}`}
-                                                    style={{ width: `${(book.available / book.total) * 100}%` }}
-                                                />
-                                            </div>
-                                            <span className="text-xs font-bold text-slate-500">{book.available}/{book.total}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button size="sm" variant="ghost" className="rounded-lg hover:bg-blue-50 hover:text-blue-600 font-bold" disabled={book.available === 0}>
-                                            Issue
-                                        </Button>
-                                    </TableCell>
+                    {books.length === 0 ? (
+                        <div className="p-12">
+                            <EmptyState
+                                icon={Library}
+                                title="No resources found"
+                                description="Your library catalog is empty or no matches found for your search."
+                                actionLabel="Acquire First Resource"
+                                onAction={() => setIsDialogOpen(true)}
+                            />
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/30 border-0">
+                                    <TableHead className="font-bold h-12">Resource Title</TableHead>
+                                    <TableHead className="font-bold h-12">Contributor</TableHead>
+                                    <TableHead className="font-bold h-12">Identifier</TableHead>
+                                    <TableHead className="font-bold h-12">Genre</TableHead>
+                                    <TableHead className="font-bold h-12">Liquidity</TableHead>
+                                    <TableHead className="font-bold h-12 text-right">Ops</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {books.map((book) => (
+                                    <TableRow key={book._id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
+                                        <TableCell className="font-bold text-slate-900">{book.title}</TableCell>
+                                        <TableCell className="text-slate-600">{book.author}</TableCell>
+                                        <TableCell className="font-mono text-xs text-slate-400">{book.isbn}</TableCell>
+                                        <TableCell><Badge variant="outline" className="rounded-lg bg-slate-50 border-slate-200 text-slate-600">{book.category}</Badge></TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full ${book.availableCopies > 3 ? 'bg-emerald-500' : book.availableCopies > 0 ? 'bg-orange-500' : 'bg-red-500'}`}
+                                                        style={{ width: `${(book.availableCopies / book.totalCopies) * 100}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-500">{book.availableCopies}/{book.totalCopies}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button size="sm" variant="ghost" className="rounded-lg hover:bg-blue-50 hover:text-blue-600 font-bold" disabled={book.availableCopies === 0}>
+                                                Issue
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
         </div>
