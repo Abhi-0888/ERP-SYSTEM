@@ -5,6 +5,7 @@ import { PermissionOverride, PermissionOverrideSchema } from './override.schema'
 import { AuditService } from './audit.service';
 import { MonitorService } from './monitor.service';
 import { OverrideController } from './override.controller';
+import { AuditController } from './audit.controller';
 
 @Global()
 @Module({
@@ -14,7 +15,7 @@ import { OverrideController } from './override.controller';
             { name: PermissionOverride.name, schema: PermissionOverrideSchema },
         ]),
     ],
-    controllers: [OverrideController],
+    controllers: [OverrideController, AuditController],
     providers: [AuditService, MonitorService],
     exports: [AuditService],
 })

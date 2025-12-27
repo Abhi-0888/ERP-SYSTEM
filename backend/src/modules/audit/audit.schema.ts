@@ -26,6 +26,21 @@ export class AuditLog extends Document {
 
     @Prop()
     universityId: string;
+
+    @Prop()
+    details?: string;
+
+    @Prop()
+    severity?: string;
+
+    @Prop()
+    status?: string;
+
+    @Prop()
+    ipAddress?: string;
+
+    @Prop({ type: Date })
+    createdAt?: Date;
 }
 
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLog);
