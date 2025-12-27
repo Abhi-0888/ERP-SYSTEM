@@ -5,6 +5,8 @@ import { OnboardingService } from './onboarding.service';
 import { OnboardingStatus, OnboardingStatusSchema } from './onboarding.schema';
 import { UniversityModule } from '../university/university.module';
 import { University, UniversitySchema } from '../university/university.schema';
+import { AcademicModule } from '../academic/academic.module';
+import { UserModule } from '../user/user.module';
 import { APP_GUARD } from '@nestjs/core';
 import { OnboardingGuard } from '../../common/guards/onboarding.guard';
 
@@ -15,6 +17,8 @@ import { OnboardingGuard } from '../../common/guards/onboarding.guard';
             { name: University.name, schema: UniversitySchema },
         ]),
         UniversityModule,
+        AcademicModule,
+        UserModule,
     ],
     controllers: [OnboardingController],
     providers: [
@@ -27,3 +31,4 @@ import { OnboardingGuard } from '../../common/guards/onboarding.guard';
     exports: [OnboardingService],
 })
 export class OnboardingModule { }
+

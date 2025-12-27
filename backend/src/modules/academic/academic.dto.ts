@@ -71,6 +71,10 @@ export class CreateDepartmentDto {
 
     @IsString()
     @IsOptional()
+    universityId?: string;
+
+    @IsString()
+    @IsOptional()
     description?: string;
 
     @IsString()
@@ -108,15 +112,27 @@ export class CreateProgramDto {
     code: string;
 
     @IsEnum(ProgramType)
-    type: ProgramType;
+    @IsOptional()
+    type?: ProgramType;
 
     @IsString()
     departmentId: string;
 
     @IsNumber()
+    @IsOptional()
     @Min(1)
     @Max(8)
-    totalSemesters: number;
+    totalSemesters?: number;
+
+    @IsNumber()
+    @IsOptional()
+    @Min(1)
+    @Max(10)
+    duration?: number;
+
+    @IsString()
+    @IsOptional()
+    level?: string;
 
     @IsString()
     @IsOptional()

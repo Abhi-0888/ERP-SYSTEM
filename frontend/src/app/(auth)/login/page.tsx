@@ -22,7 +22,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      const result = await login(email, password);
+
+      // Check if user's university is in setup mode - redirect to onboarding
+      const storedUser = localStorage.getItem("educore_user");
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        if (userData.universityStatus === "setup") {
+          router.push("/onboarding");
+          return;
+        }
+      }
+
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -32,24 +43,15 @@ export default function LoginPage() {
   };
 
   const demoAccounts = [
-    { email: "superadmin@erp.com", role: "Super Admin" },
-    { email: "admin@demouniversity.edu", role: "Uni Admin" }, // University Admin
-    { email: "faculty1@demouniversity.edu", role: "Faculty" },
-    { email: "student1@demouniversity.edu", role: "Student" },
-    // Keep others for UI but they might fail if not in seed
-    { email: "principal@srm.edu", role: "Principal" },
-    { email: "hod@srm.edu", role: "HOD" },
-    { email: "parent@srm.edu", role: "Parent" },
-    { email: "librarian@srm.edu", role: "Librarian" },
-    { email: "accountant@srm.edu", role: "Accountant" },
-    { email: "warden@srm.edu", role: "Warden" },
-    { email: "transport@srm.edu", role: "Transport" },
-    { email: "placement@srm.edu", role: "Placement" },
+    { email: "superadmin@eduncore.com", role: "Super Admin" },
+    { email: "admin@git.edu", role: "Uni Admin" },
+    { email: "faculty_pro@git.edu", role: "Faculty" },
+    { email: "alice@git.edu", role: "Student" },
   ];
 
   const handleDemoLogin = (demoEmail: string) => {
     setEmail(demoEmail);
-    setPassword("admin123");
+    setPassword("password123");
   };
 
   return (
@@ -144,7 +146,7 @@ export default function LoginPage() {
 
               {/* Demo Accounts */}
               <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-slate-500 text-center mb-3">Demo Accounts (Password: admin123)</p>
+                <p className="text-sm text-slate-500 text-center mb-3">Demo Accounts (Password: password123)</p>
                 <div className="grid grid-cols-3 gap-2">
                   {demoAccounts.map((account) => (
                     <Button
