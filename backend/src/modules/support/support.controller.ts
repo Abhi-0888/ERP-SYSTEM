@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Post, Request } from '@nestjs/common';
 import { SupportService } from './support.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -16,9 +16,13 @@ export class SupportController {
         return this.supportService.findAll();
     }
 
-    @Patch('tickets/:id/status')
-    @Roles(Role.SUPER_ADMIN)
     updateStatus(@Param('id') id: string, @Body('status') status: string) {
         return this.supportService.updateStatus(id, status);
+    }
+
+    @Post('tickets/:id/reply')
+    @Roles(Role.SUPER_ADMIN)
+    reply(@Param('id') id: string, @Body('message') message: string, @Request() req) {
+        return this.supportService.reply(id, message, req.user.userId);
     }
 }

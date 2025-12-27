@@ -34,9 +34,13 @@ export class SuperAdminController {
     getAuditLogs(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 50,
-        @Query('userId') userId?: string
+        @Query('userId') userId?: string,
+        @Query('module') module?: string,
+        @Query('severity') severity?: string,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string
     ) {
-        return this.superAdminService.getAuditLogs(Number(page), Number(limit), userId);
+        return this.superAdminService.getAuditLogs(Number(page), Number(limit), userId, module, severity, startDate, endDate);
     }
 
     @Get('stats/security-events')
@@ -49,5 +53,15 @@ export class SuperAdminController {
     @Roles(Role.SUPER_ADMIN)
     getActiveSessions() {
         return this.superAdminService.getActiveSessions();
+    }
+
+    @Get('reports/export')
+    @Roles(Role.SUPER_ADMIN)
+    async exportReport(
+        @Query('type') type: 'USER_ACTIVITY' | 'SECURITY_EVENTS',
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string
+    ) {
+        return this.superAdminService.exportReports(type, startDate, endDate);
     }
 }

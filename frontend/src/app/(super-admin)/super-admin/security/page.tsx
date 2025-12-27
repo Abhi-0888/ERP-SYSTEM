@@ -34,43 +34,73 @@ export default function SecurityCenterPage() {
     const [sessions, setSessions] = useState<any[]>([]);
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
+    const [moduleFilter, setModuleFilter] = useState("ALL");
+    const [severityFilter, setSeverityFilter] = useState("ALL");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+
     const searchParams = useSearchParams();
     const userIdFilter = searchParams.get('userId');
     const router = useRouter();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const [statsRes, eventsRes, sessionsRes, auditRes] = await Promise.all([
-                    SuperAdminService.getSecurityStats(),
-                    SuperAdminService.getSecurityEvents(),
-                    SuperAdminService.getActiveSessions(),
-                    SuperAdminService.getAuditLogs(1, 50, userIdFilter || "")
-                ]);
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [statsRes, eventsRes, sessionsRes, auditRes] = await Promise.all([
+                SuperAdminService.getSecurityStats(),
+                SuperAdminService.getSecurityEvents(),
+                SuperAdminService.getActiveSessions(),
+                SuperAdminService.getAuditLogs(1, 50, userIdFilter || "", moduleFilter, severityFilter, dateFrom, dateTo)
+            ]);
 
-                setStats({
-                    ...statsRes.data,
-                    failedVectors: eventsRes.data.failedVectors,
-                    sensitiveActions: eventsRes.data.sensitiveActions
-                });
-                setSessions(sessionsRes.data);
-                setAuditLogs(auditRes.data.logs || []); // Store logs
+            setStats({
+                ...statsRes.data,
+                failedVectors: eventsRes.data.failedVectors,
+                sensitiveActions: eventsRes.data.sensitiveActions
+            });
+            setSessions(sessionsRes.data);
+            setAuditLogs(auditRes.data.logs || []);
 
-                if (userIdFilter) {
-                    setActiveTab("audit");
-                }
-            } catch (error) {
-                toast.error("Failed to load security intelligence");
-            } finally {
-                setLoading(false);
+            if (userIdFilter) {
+                setActiveTab("audit");
             }
-        };
+        } catch (error) {
+            toast.error("Failed to load security intelligence");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchData();
-    }, [userIdFilter]);
+    }, [userIdFilter, moduleFilter, severityFilter, dateFrom, dateTo]);
 
     const clearFilter = () => {
+        setModuleFilter("ALL");
+        setSeverityFilter("ALL");
+        setDateFrom("");
+        setDateTo("");
         router.push('/super-admin/security');
+    };
+
+    const handleExport = async (type: 'USER_ACTIVITY' | 'SECURITY_EVENTS') => {
+        try {
+            const token = localStorage.getItem('educore_token');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/super-admin/reports/export?type=${type}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report-${type}-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            toast.success("Report downloaded successfully");
+        } catch (error) {
+            toast.error("Failed to generate report");
+        }
     };
 
     return (
@@ -81,13 +111,16 @@ export default function SecurityCenterPage() {
                     <p className="text-slate-500 mt-1">Real-time threat monitoring and audit forensics.</p>
                 </div>
                 <div className="flex gap-2">
-                    {userIdFilter && (
+                    {(userIdFilter || moduleFilter !== 'ALL' || severityFilter !== 'ALL') && (
                         <Button variant="outline" className="rounded-xl bg-amber-50 text-amber-600 border-amber-200" onClick={clearFilter}>
-                            <X className="h-4 w-4 mr-2" /> Clear Filter: {userIdFilter.substring(0, 8)}...
+                            <X className="h-4 w-4 mr-2" /> Clear Filters
                         </Button>
                     )}
-                    <Button variant="outline" className="rounded-xl bg-white">
+                    <Button variant="outline" className="rounded-xl bg-white" onClick={() => handleExport('USER_ACTIVITY')}>
                         <FileText className="h-4 w-4 mr-2" />Export Report
+                    </Button>
+                    <Button variant="outline" className="rounded-xl bg-white" onClick={() => handleExport('SECURITY_EVENTS')}>
+                        <ShieldAlert className="h-4 w-4 mr-2" />Export Security
                     </Button>
                     <Button className="rounded-xl bg-slate-900 text-white shadow-lg">
                         <Terminal className="h-4 w-4 mr-2" />Security CLI
@@ -111,19 +144,53 @@ export default function SecurityCenterPage() {
                 <TabsContent value="audit" className="space-y-6">
                     <Card className="border-0 shadow-sm rounded-2xl overflow-hidden border border-slate-100">
                         <div className="p-4 border-b bg-slate-50/50 flex flex-wrap items-center gap-4">
-                            <div className="relative flex-1 min-w-[300px]">
+                            <div className="relative flex-1 min-w-[200px]">
                                 <FileSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <Input
-                                    placeholder="Query by UserID, Module, or Action UUID..."
-                                    className="pl-10 rounded-xl h-10 bg-white"
+                                    placeholder="Search details..."
+                                    className="pl-10 rounded-xl h-9 bg-white text-xs"
+                                />
+                            </div>
+                            <select
+                                className="h-9 rounded-xl border-slate-200 text-xs px-3 bg-white border"
+                                value={moduleFilter}
+                                onChange={(e) => setModuleFilter(e.target.value)}
+                            >
+                                <option value="ALL">All Modules</option>
+                                <option value="AUTH">Auth</option>
+                                <option value="UNIVERSITY">University</option>
+                                <option value="USER">User</option>
+                                <option value="SECURITY">Security</option>
+                            </select>
+                            <select
+                                className="h-9 rounded-xl border-slate-200 text-xs px-3 bg-white border"
+                                value={severityFilter}
+                                onChange={(e) => setSeverityFilter(e.target.value)}
+                            >
+                                <option value="ALL">All Severities</option>
+                                <option value="Info">Info</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="CRITICAL">Critical</option>
+                            </select>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="date"
+                                    className="h-9 w-32 rounded-xl bg-white text-xs"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                />
+                                <span className="text-slate-400">-</span>
+                                <Input
+                                    type="date"
+                                    className="h-9 w-32 rounded-xl bg-white text-xs"
+                                    value={dateTo}
+                                    onChange={(e) => setDateTo(e.target.value)}
                                 />
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="outline" size="sm" className="rounded-xl bg-white">
-                                    <Filter className="h-4 w-4 mr-2" />Filters
-                                </Button>
-                                <Button variant="outline" size="sm" className="rounded-xl bg-white">
-                                    <RefreshCw className="h-4 w-4 mr-2" />Auto-Refresh
+                                <Button variant="outline" size="sm" className="rounded-xl bg-white h-9" onClick={fetchData}>
+                                    <RefreshCw className="h-3 w-3 mr-2" />Refresh
                                 </Button>
                             </div>
                         </div>

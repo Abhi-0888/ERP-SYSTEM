@@ -90,9 +90,15 @@ export class SuperAdminService {
         };
     }
 
-    async getAuditLogs(page: number = 1, limit: number = 50, userId?: string) {
+    async getAuditLogs(page: number = 1, limit: number = 50, userId?: string, module?: string, severity?: string, startDate?: string, endDate?: string) {
         const skip = (page - 1) * limit;
-        const filter = userId ? { userId } : {};
+        const filter: any = {};
+        if (userId) filter.userId = userId;
+        if (module) filter.module = module;
+        if (severity) filter.severity = severity;
+        if (startDate && endDate) {
+            filter.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+        }
 
         const [logs, total] = await Promise.all([
             this.auditLogModel.find(filter)
@@ -141,5 +147,42 @@ export class SuperAdminService {
         ]);
 
         return sessions;
+    }
+
+    async exportReports(type: 'USER_ACTIVITY' | 'SECURITY_EVENTS', startDate?: string, endDate?: string) {
+        const query: any = {};
+        if (startDate && endDate) {
+            query.createdAt = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        if (type === 'SECURITY_EVENTS') {
+            query.severity = { $in: ['CRITICAL', 'WARNING'] };
+        }
+
+        const logs = await this.auditLogModel.find(query).sort({ createdAt: -1 }).limit(1000).exec();
+
+        // SCV Generation
+        const headers = ['Timestamp', 'UserID', 'Role', 'UniversityID', 'Action', 'Module', 'IP Address', 'Severity', 'Details'];
+        const rows = logs.map(log => [
+            log.createdAt.toISOString(),
+            log.userId || 'N/A',
+            'N/A', // Role not always in audit log, simplified
+            log.universityId || 'Global',
+            log.action,
+            log.module,
+            log.ipAddress || 'N/A',
+            log.severity || 'Info',
+            `"${(log.details || '').replace(/"/g, '""')}"` // Escape quotes
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+
+        return csvContent;
     }
 }
