@@ -63,8 +63,9 @@ export default function GlobalUsersPage() {
         }
     };
 
-    const handleDisableUser = async (userId: string, currentStatus: string) => {
-        const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+    const handleDisableUser = async (userId: string, currentStatus: string | undefined, currentIsActive?: boolean) => {
+        const effectiveStatus = currentStatus || (currentIsActive ? 'active' : 'disabled');
+        const newStatus = effectiveStatus === 'active' ? 'disabled' : 'active';
         try {
             await api.patch(`/users/${userId}/status`, { status: newStatus });
             toast.warning(`User ${newStatus === 'active' ? 'enabled' : 'disabled'} across all nodes.`);
@@ -234,8 +235,8 @@ export default function GlobalUsersPage() {
                                                         <History className="h-4 w-4 text-slate-500" /> Access Audit Trail
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator className="bg-slate-50" />
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer text-red-600 font-bold" onClick={() => handleDisableUser(user._id || user.id, user.status)}>
-                                                        <Ban className="h-4 w-4" /> {user.status === 'active' ? 'Revoke Platform Access' : 'Restore Access'}
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer text-red-600 font-bold" onClick={() => handleDisableUser(user._id || user.id, user.status, user.isActive)}>
+                                                        <Ban className="h-4 w-4" /> {(user.status || (user.isActive ? 'active' : 'disabled')) === 'active' ? 'Revoke Platform Access' : 'Restore Access'}
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

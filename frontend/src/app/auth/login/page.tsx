@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation';
+"use client";
 
-export default function AuthLoginRedirect() {
-  redirect('/login');
-}
+import LoginPage from "@/app/(auth)/login/page";
+
+export default LoginPage;
+

@@ -5,6 +5,7 @@ import { University, UniversityDocument } from './university.schema';
 import { User, UserDocument } from '../user/user.schema';
 import { Role } from '../../common/enums/role.enum';
 import * as bcrypt from 'bcrypt';
+import { StatsService } from '../stats/stats.service';
 
 @Injectable()
 export class UniversityService {
@@ -61,5 +62,59 @@ export class UniversityService {
 
     async findByCode(code: string): Promise<University> {
         return this.universityModel.findOne({ code }).exec();
+    }
+
+    async getTenantSummary(universityId: string, statsService: StatsService) {
+        const [university, global, modules, usersTotal, usersActive] = await Promise.all([
+            this.universityModel.findById(universityId).exec(),
+            statsService.getGlobalStats(universityId),
+            statsService.getModuleStats(universityId),
+            this.userModel.countDocuments({ universityId }),
+            this.userModel.countDocuments({ universityId, isActive: true }),
+        ]);
+
+        return {
+            university: {
+                id: university?._id,
+                name: university?.name,
+                code: university?.code,
+                status: university?.status,
+                subscriptionPlan: university?.subscriptionPlan,
+                subscriptionDetails: university?.subscriptionDetails,
+                onboardingStage: university?.onboardingStage,
+                contactEmail: university?.contactEmail,
+            },
+            global,
+            modules,
+            users: {
+                total: usersTotal,
+                active: usersActive,
+            },
+        };
+    }
+
+    async assignGlobalAdmin(universityId: string, body: { adminEmail: string; adminUsername?: string; adminPassword: string }) {
+        const { adminEmail, adminUsername, adminPassword } = body;
+        const hashed = await bcrypt.hash(adminPassword, 10);
+        const user = await this.userModel.create({
+            username: adminUsername || adminEmail.split('@')[0],
+            email: adminEmail,
+            password: hashed,
+            role: Role.UNIVERSITY_ADMIN,
+            universityId,
+            isActive: true,
+            status: 'active',
+        });
+        await this.universityModel.findByIdAndUpdate(universityId, { contactEmail: adminEmail }).exec();
+        return { success: true, userId: user._id };
+    }
+
+    async upgradeLicense(universityId: string, plan: string, details?: Record<string, any>) {
+        const update: any = { subscriptionPlan: plan };
+        if (details) {
+            update.subscriptionDetails = details;
+        }
+        const uni = await this.universityModel.findByIdAndUpdate(universityId, update, { new: true }).exec();
+        return { success: true, subscriptionPlan: uni.subscriptionPlan, subscriptionDetails: uni.subscriptionDetails };
     }
 }

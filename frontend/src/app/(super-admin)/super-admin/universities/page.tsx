@@ -96,6 +96,56 @@ export default function UniversitiesManagementPage() {
             u.code?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const [summaryOpen, setSummaryOpen] = useState(false);
+    const [summaryData, setSummaryData] = useState<any | null>(null);
+    const [assignOpen, setAssignOpen] = useState(false);
+    const [assignForm, setAssignForm] = useState<{ adminEmail: string; adminUsername: string; adminPassword: string }>({
+        adminEmail: "",
+        adminUsername: "",
+        adminPassword: "",
+    });
+    const [upgradeOpen, setUpgradeOpen] = useState(false);
+    const [upgradeForm, setUpgradeForm] = useState<{ subscriptionPlan: string }>({ subscriptionPlan: "pro" });
+    const [selectedUniversityId, setSelectedUniversityId] = useState<string | null>(null);
+
+    const handleViewSummary = async (id: string) => {
+        try {
+            const data = await UniversityService.getSummary(id);
+            setSummaryData(data);
+            setSummaryOpen(true);
+        } catch (error) {
+            toast.error("Failed to load tenant summary");
+        }
+    };
+
+    const handleAssignAdmin = async (id: string) => {
+        if (!assignForm.adminEmail || !assignForm.adminPassword) {
+            toast.error("Email and password are required");
+            return;
+        }
+        try {
+            await UniversityService.assignAdmin(id, assignForm);
+            toast.success("Global admin assigned");
+            setAssignOpen(false);
+            setAssignForm({ adminEmail: "", adminUsername: "", adminPassword: "" });
+            fetchUniversities();
+        } catch (error) {
+            toast.error("Assignment failed");
+        }
+    };
+
+    const handleUpgradeLicense = async (id: string) => {
+        try {
+            await UniversityService.upgradeLicense(id, { subscriptionPlan: upgradeForm.subscriptionPlan });
+            toast.success("License upgraded");
+            setUpgradeOpen(false);
+            setUpgradeForm({ subscriptionPlan: "pro" });
+            fetchUniversities();
+        } catch (error) {
+            toast.error("Upgrade failed");
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -281,13 +331,13 @@ export default function UniversitiesManagementPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl">
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer">
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => handleViewSummary(uni._id)}>
                                                         <Eye className="h-4 w-4 text-slate-400" /> View Tenant Summary
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer">
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => { setSelectedUniversityId(uni._id); setAssignOpen(true); setAssignForm({ adminEmail: "", adminUsername: "", adminPassword: "" }); }}>
                                                         <UserPlus className="h-4 w-4 text-slate-400" /> Assign Global Admin
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer">
+                                                    <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => { setSelectedUniversityId(uni._id); setUpgradeOpen(true); }}>
                                                         <ChevronUp className="h-4 w-4 text-slate-400" /> Upgrade License
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
@@ -350,6 +400,73 @@ export default function UniversitiesManagementPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+                <DialogContent className="max-w-lg bg-white">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">Tenant Summary</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-2 text-sm">
+                        {summaryData ? (
+                            <>
+                                <div className="font-bold">{summaryData.university.name} ({summaryData.university.code})</div>
+                                <div>Status: {summaryData.university.status}</div>
+                                <div>Plan: {summaryData.university.subscriptionPlan}</div>
+                                <div>Users: {summaryData.users.active}/{summaryData.users.total}</div>
+                                <div>Students: {summaryData.global.students}</div>
+                                <div>Faculty: {summaryData.global.faculty}</div>
+                                <div>Attendance: {summaryData.global.attendance}</div>
+                                <div>Fees: {summaryData.global.fees}</div>
+                                <div>Hostel Occupancy: {summaryData.modules.hostels.occupancy}</div>
+                                <div>Library Titles: {summaryData.modules.library.totalTitles}</div>
+                            </>
+                        ) : (
+                            <div>Loading...</div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+                <DialogContent className="max-w-md bg-white">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">Assign Global Admin</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <Input placeholder="Admin Email" value={assignForm.adminEmail} onChange={(e) => setAssignForm({ ...assignForm, adminEmail: e.target.value })} />
+                        <Input placeholder="Admin Username (optional)" value={assignForm.adminUsername} onChange={(e) => setAssignForm({ ...assignForm, adminUsername: e.target.value })} />
+                        <Input type="password" placeholder="Admin Password" value={assignForm.adminPassword} onChange={(e) => setAssignForm({ ...assignForm, adminPassword: e.target.value })} />
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="ghost" onClick={() => setAssignOpen(false)}>Cancel</Button>
+                            <Button onClick={() => {
+                                if (!selectedUniversityId) { toast.error("No tenant selected"); return; }
+                                handleAssignAdmin(selectedUniversityId);
+                            }}>Assign</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+                <DialogContent className="max-w-md bg-white">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">Upgrade License</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <select className="w-full h-10 border rounded-xl px-3 text-sm" value={upgradeForm.subscriptionPlan} onChange={(e) => setUpgradeForm({ subscriptionPlan: e.target.value })}>
+                            <option value="pro">Pro</option>
+                            <option value="enterprise">Enterprise</option>
+                        </select>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="ghost" onClick={() => setUpgradeOpen(false)}>Cancel</Button>
+                            <Button onClick={() => {
+                                if (!selectedUniversityId) { toast.error("No tenant selected"); return; }
+                                handleUpgradeLicense(selectedUniversityId);
+                            }}>Upgrade</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -24,6 +24,9 @@ export class User {
     @Prop({ default: true })
     isActive: boolean;
 
+    @Prop({ default: 'active' })
+    status: string;
+
     @Prop()
     email: string;
 
@@ -32,6 +35,12 @@ export class User {
 
     @Prop()
     lastLogin: Date;
+
+    @Prop()
+    lastLogoutAllNodes: Date;
+
+    @Prop({ default: false })
+    mustChangePassword: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

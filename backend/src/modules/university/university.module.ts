@@ -5,6 +5,7 @@ import { User, UserSchema } from '../user/user.schema';
 import { UniversityService } from './university.service';
 import { UniversityController } from './university.controller';
 import { UserModule } from '../user/user.module';
+import { StatsModule } from '../stats/stats.module';
 
 @Module({
     imports: [
@@ -13,6 +14,7 @@ import { UserModule } from '../user/user.module';
             { name: User.name, schema: UserSchema },
         ]),
         forwardRef(() => UserModule),
+        StatsModule,
     ],
     controllers: [UniversityController],
     providers: [UniversityService],

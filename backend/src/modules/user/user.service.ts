@@ -57,7 +57,8 @@ export class UserService {
     }
 
     async updateStatus(id: string, status: string): Promise<User> {
-        return this.userModel.findByIdAndUpdate(id, { status }, { new: true }).exec();
+        const isActive = status === 'active';
+        return this.userModel.findByIdAndUpdate(id, { status, isActive }, { new: true }).exec();
     }
 
     async resetPassword(id: string): Promise<User> {
