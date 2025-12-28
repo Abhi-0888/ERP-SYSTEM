@@ -142,11 +142,23 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                            if (activeRole === "SUPER_ADMIN") {
+                                router.push("/super-admin/settings?tab=profile");
+                            } else {
+                                router.push("/dashboard/settings");
+                            }
+                        }}>
                             <User className="mr-2 h-4 w-4" />
                             Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                            if (activeRole === "SUPER_ADMIN") {
+                                router.push("/super-admin/settings?tab=system");
+                            } else {
+                                router.push("/dashboard/settings");
+                            }
+                        }}>
                             <Settings className="mr-2 h-4 w-4" />
                             Settings
                         </DropdownMenuItem>
