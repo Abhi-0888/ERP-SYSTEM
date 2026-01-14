@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
 import { SuperAdminService } from './super-admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -32,15 +32,15 @@ export class SuperAdminController {
     @Get('audit-logs')
     @Roles(Role.SUPER_ADMIN)
     getAuditLogs(
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 50,
+        @Query('page', ParseIntPipe) page = 1,
+        @Query('limit', ParseIntPipe) limit = 50,
         @Query('userId') userId?: string,
         @Query('module') module?: string,
         @Query('severity') severity?: string,
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string
     ) {
-        return this.superAdminService.getAuditLogs(Number(page), Number(limit), userId, module, severity, startDate, endDate);
+        return this.superAdminService.getAuditLogs(page, limit, userId, module, severity, startDate, endDate);
     }
 
     @Get('stats/security-events')

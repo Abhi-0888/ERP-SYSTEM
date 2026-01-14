@@ -6,9 +6,25 @@ import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters/http-
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    // Enable CORS with specific origin
+    // Enable CORS with flexible origin config (comma-separated values supported)
+    const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:3000';
+    const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
+
     app.enableCors({
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: (origin, callback) => {
+            // Allow non-browser/server-to-server requests with no origin (e.g., curl, server-side)
+            if (!origin) return callback(null, true);
+
+            if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            // Also allow common localhost variants if explicitly requested
+            const hostVariants = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+            if (hostVariants.includes(origin) && allowedOrigins.includes('http://localhost:3000')) {
+                return callback(null, true);
+            }
+            return callback(new Error('CORS policy: Origin not allowed'), false);
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],

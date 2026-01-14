@@ -76,19 +76,29 @@ npm run dev
 Frontend runs on: http://localhost:3000
 
 ### Seed Database
+Seeding is disabled by default. See the **Super Admin and Credentials** section below for secure instructions.
+
+## 🔐 Super Admin and Credentials
+
+This repository does not ship with working fake credentials for production safety. Seeding is disabled by default to avoid inserting test or fake users into real databases.
+
+If you need to create a Super Admin for a development environment, enable seeding explicitly and supply real credentials via environment variables. Example (Unix/macOS):
+
 ```bash
 cd backend
-npm run seed
+ENABLE_SEED=true SEED_SUPERADMIN=true \
+SEED_SUPERADMIN_USERNAME=superadmin \
+SEED_SUPERADMIN_EMAIL=admin@yourdomain.com \
+SEED_SUPERADMIN_PASSWORD='Your$trongP@ss' npm run seed
 ```
 
-## 🔐 Default Credentials
+On Windows PowerShell (single-line example):
 
-| Role | Username | Password |
-|------|----------|----------|
-| Super Admin |      | admin123 |
-| University Admin | uniadmin | admin123 |
-| Faculty | faculty1 | admin123 |
-| Student | student1 | admin123 |
+```powershell
+$env:ENABLE_SEED='true'; $env:SEED_SUPERADMIN='true'; $env:SEED_SUPERADMIN_USERNAME='superadmin'; $env:SEED_SUPERADMIN_EMAIL='admin@yourdomain.com'; $env:SEED_SUPERADMIN_PASSWORD='Your$trongP@ss'; npm run seed
+```
+
+Note: Only run seeding against development or isolated databases. For production, create Super Admin accounts via a secure provisioning workflow or direct DB migration with approved secrets management.
 
 ## 📖 Documentation
 

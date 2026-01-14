@@ -8,7 +8,15 @@ import { Connection } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 
 async function bootstrap() {
-    console.log('🚀 Starting Seed Script...');
+    // For safety: seeding is disabled by default. Require explicit opt-in.
+    const ENABLE_SEED = process.env.ENABLE_SEED === 'true';
+    if (!ENABLE_SEED) {
+        console.log('⚠️  Seed script is disabled by default to prevent inserting fake data.');
+        console.log('To enable seeding, run with ENABLE_SEED=true and provide required SEED_* env vars.');
+        process.exit(0);
+    }
+
+    console.log('🚀 Starting Seed Script (ENABLED)...');
     const app = await NestFactory.createApplicationContext(AppModule);
 
     // Get Native Mongoose Connection
@@ -18,49 +26,65 @@ async function bootstrap() {
     if (connection.readyState !== 1) {
         console.log('⏳ Waiting for database connection...');
         await new Promise(resolve => {
-            connection.once('connected', resolve); // Event listener for open
-            // Fallback timeout just in case it's ALREADY connected but state mismatch (unlikely)
+            connection.once('connected', resolve);
             setTimeout(resolve, 5000);
         });
     }
     console.log(`✅ DB Connection Status: ${connection.readyState} (1=Connected)`);
 
-    console.log('🧹 flushing collections...');
-    const collections = connection.collections;
-    for (const key in collections) {
-        try {
-            await collections[key].deleteMany({});
-            console.log(`   - Cleared: ${key}`);
-        } catch (err) {
-            console.error(`   ! Failed ${key}: ${err.message}`);
+    // Optionally clear collections only when explicitly allowed
+    const FORCE_CLEAR = process.env.SEED_FORCE_CLEAR === 'true';
+    if (FORCE_CLEAR) {
+        console.log('🧹 Force-clearing collections (SEED_FORCE_CLEAR=true)...');
+        const collections = connection.collections;
+        for (const key in collections) {
+            try {
+                await collections[key].deleteMany({});
+                console.log(`   - Cleared: ${key}`);
+            } catch (err) {
+                console.error(`   ! Failed ${key}: ${err.message}`);
+            }
         }
+        console.log('✨ Collections cleared.');
+    } else {
+        console.log('ℹ️  Skipping collection flush (SEED_FORCE_CLEAR not set).');
     }
-    console.log('✨ All collections flushed.');
 
-    const userService = app.get(UserService);
+    // Only create a Super Admin if explicitly requested and real credentials supplied
+    const CREATE_SUPERADMIN = process.env.SEED_SUPERADMIN === 'true';
+    if (CREATE_SUPERADMIN) {
+        const suUsername = process.env.SEED_SUPERADMIN_USERNAME;
+        const suEmail = process.env.SEED_SUPERADMIN_EMAIL;
+        const suPassword = process.env.SEED_SUPERADMIN_PASSWORD;
+        const suName = process.env.SEED_SUPERADMIN_NAME || 'System Root';
 
-    console.log('🌱 Seeding Super Admin...');
-    try {
-        // Direct DB insert might be safer if service has validation logic for 'universityId'
-        // But let's try service first as it handles hashing (if we didn't pass hashed) 
-        // actually UserService usually hashes. 
-        // Wait, previous seed hashed manually. Let's look at userService.create
-
-        // Safe approach: Use the User Model directly to avoid service validation logic on universityId if any.
-        const userModel = connection.model('User');
-
-        await userModel.create({
-            name: 'System Root',
-            username: 'superadmin',
-            email: 'admin@git.edu', // As requested in credentials.txt
-            password: await bcrypt.hash('password123', 10),
-            role: Role.SUPER_ADMIN,
-            isActive: true,
-            createdAt: new Date(),
-        });
-        console.log('✅ Super Admin Created.');
-    } catch (e) {
-        console.error('❌ Error creating Super Admin:', e);
+        if (!suUsername || !suEmail || !suPassword) {
+            console.error('❌ SEED_SUPERADMIN_USERNAME, SEED_SUPERADMIN_EMAIL and SEED_SUPERADMIN_PASSWORD are required to create Super Admin.');
+        } else {
+            console.log('🌱 Creating Super Admin (from provided credentials)...');
+            try {
+                const userModel = connection.model('User');
+                const existing = await userModel.findOne({ $or: [{ username: suUsername }, { email: suEmail }] });
+                if (existing) {
+                    console.log('⚠️  Super Admin already exists; skipping creation.');
+                } else {
+                    await userModel.create({
+                        name: suName,
+                        username: suUsername,
+                        email: suEmail,
+                        password: await bcrypt.hash(suPassword, 10),
+                        role: Role.SUPER_ADMIN,
+                        isActive: true,
+                        createdAt: new Date(),
+                    });
+                    console.log('✅ Super Admin Created.');
+                }
+            } catch (e) {
+                console.error('❌ Error creating Super Admin:', e);
+            }
+        }
+    } else {
+        console.log('ℹ️  SEED_SUPERADMIN not set; no Super Admin created.');
     }
 
     await app.close();
