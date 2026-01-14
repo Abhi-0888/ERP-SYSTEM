@@ -1,4 +1,5 @@
-import { Controller, Get, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, ParseIntPipe, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { SuperAdminService } from './super-admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -65,9 +66,17 @@ export class SuperAdminController {
     @Roles(Role.SUPER_ADMIN)
     async exportReport(
         @Query('type') type: 'USER_ACTIVITY' | 'SECURITY_EVENTS',
-        @Query('startDate') startDate?: string,
-        @Query('endDate') endDate?: string
+        @Query('startDate') startDate: string | undefined, // Explicit type for clarity
+        @Query('endDate') endDate: string | undefined,
+        @Res() res: Response
     ) {
-        return this.superAdminService.exportReports(type, startDate, endDate);
+        const csvContent = await this.superAdminService.exportReports(type, startDate, endDate);
+
+        res.set({
+            'Content-Type': 'text/csv',
+            'Content-Disposition': `attachment; filename="report-${type.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv"`,
+        });
+
+        return res.send(csvContent);
     }
 }

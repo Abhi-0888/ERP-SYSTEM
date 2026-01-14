@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { University, UniversityDocument } from './university.schema';
@@ -18,6 +18,21 @@ export class UniversityService {
 
     async create(createUniversityDto: any): Promise<University> {
         const { adminEmail, adminUsername, adminPassword, ...universityData } = createUniversityDto;
+
+        // Check for duplicates
+        if (adminEmail) {
+            const existingUser = await this.userModel.findOne({ email: adminEmail, isDeleted: false }).exec();
+            if (existingUser) {
+                throw new ConflictException('User with this email already exists');
+            }
+        }
+
+        if (adminUsername) {
+            const existingUser = await this.userModel.findOne({ username: adminUsername, isDeleted: false }).exec();
+            if (existingUser) {
+                throw new ConflictException('User with this username already exists');
+            }
+        }
 
         const createdUniversity = new this.universityModel({
             ...universityData,

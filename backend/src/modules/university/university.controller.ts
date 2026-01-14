@@ -16,6 +16,7 @@ import { Role } from '../../common/enums/role.enum';
 
 import { UniversityIsolationGuard } from '../../common/guards/university-isolation.guard';
 import { StatsService } from '../stats/stats.service';
+import { CreateUniversityDto } from './dto/create-university.dto';
 
 @Controller('universities')
 @UseGuards(JwtAuthGuard, RolesGuard, UniversityIsolationGuard)
@@ -27,7 +28,7 @@ export class UniversityController {
 
     @Post()
     @Roles(Role.SUPER_ADMIN)
-    create(@Body() createUniversityDto: any) {
+    create(@Body() createUniversityDto: CreateUniversityDto) {
         return this.universityService.create(createUniversityDto);
     }
 
