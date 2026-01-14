@@ -18,7 +18,8 @@ export class UserService {
     }
 
     async findAll(universityId?: string): Promise<User[]> {
-        const filter = universityId ? { universityId } : {};
+        const filter: any = { isDeleted: false };
+        if (universityId) filter.universityId = universityId;
         return this.userModel.find(filter).select('-password').populate('universityId', 'name').exec();
     }
 
@@ -27,7 +28,7 @@ export class UserService {
     }
 
     async findByUsername(username: string): Promise<User> {
-        return this.userModel.findOne({ username }).exec();
+        return this.userModel.findOne({ username, isDeleted: false }).exec();
     }
 
     async update(id: string, updateUserDto: any): Promise<User> {
@@ -41,11 +42,15 @@ export class UserService {
     }
 
     async remove(id: string): Promise<User> {
-        return this.userModel.findByIdAndDelete(id).exec();
+        return this.userModel.findByIdAndUpdate(
+            id,
+            { isDeleted: true, deletedAt: new Date(), isActive: false, status: 'inactive' },
+            { new: true }
+        ).exec();
     }
 
     async findByRole(role: string, universityId?: string): Promise<User[]> {
-        const filter: any = { role };
+        const filter: any = { role, isDeleted: false };
         if (universityId) filter.universityId = universityId;
         return this.userModel.find(filter).select('-password').exec();
     }

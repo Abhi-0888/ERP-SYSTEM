@@ -43,7 +43,7 @@ export class UniversityService {
     }
 
     async findAll(): Promise<University[]> {
-        return this.universityModel.find().exec();
+        return this.universityModel.find({ isDeleted: false }).exec();
     }
 
     async findOne(id: string): Promise<University> {
@@ -57,7 +57,31 @@ export class UniversityService {
     }
 
     async remove(id: string): Promise<University> {
-        return this.universityModel.findByIdAndDelete(id).exec();
+        // Soft delete the university
+        const deletedUniversity = await this.universityModel.findByIdAndUpdate(
+            id,
+            {
+                isDeleted: true,
+                deletedAt: new Date(),
+                status: 'inactive'
+            },
+            { new: true }
+        ).exec();
+
+        if (deletedUniversity) {
+            // Soft delete all associated users
+            await this.userModel.updateMany(
+                { universityId: id },
+                {
+                    isDeleted: true,
+                    deletedAt: new Date()
+                }
+            ).exec();
+        }
+
+        // Future: Add soft deletion for other related resources (Students, Faculty, etc.) here
+
+        return deletedUniversity;
     }
 
     async findByCode(code: string): Promise<University> {

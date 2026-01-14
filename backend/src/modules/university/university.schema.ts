@@ -14,6 +14,12 @@ export class University {
     @Prop()
     address: string;
 
+    @Prop({ default: false })
+    isDeleted: boolean;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
+
     @Prop({ default: 'basic' })
     subscriptionPlan: string;
 

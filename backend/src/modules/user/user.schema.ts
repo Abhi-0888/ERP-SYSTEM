@@ -15,8 +15,14 @@ export class User {
     @Prop({ required: true, type: String, enum: Role })
     role: Role;
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University' })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University', index: true })
     universityId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ default: false })
+    isDeleted: boolean;
+
+    @Prop({ type: Date, default: null })
+    deletedAt: Date;
 
     @Prop({ type: MongooseSchema.Types.ObjectId })
     profileId: MongooseSchema.Types.ObjectId;
