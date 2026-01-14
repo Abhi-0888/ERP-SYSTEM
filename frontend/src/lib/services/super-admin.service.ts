@@ -17,6 +17,7 @@ export const SuperAdminService = {
     },
     getSecurityEvents: () => api.get("/super-admin/stats/security-events"),
     getActiveSessions: () => api.get("/super-admin/stats/sessions"),
+    getNotifications: () => api.get("/super-admin/notifications"),
 
     // Future expansion for other Super Admin entities if not using existing services
     // For Users and Universities, we might reuse UserService and UniversityService

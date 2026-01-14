@@ -62,8 +62,10 @@ export class SuperAdminService {
         const [totalLogs, recentAlerts, failedLogins] = await Promise.all([
             this.auditLogModel.countDocuments({}),
             this.auditLogModel.find({ action: { $in: ['DELETE', 'FORCE_LOGOUT'] } }).sort({ createdAt: -1 }).limit(5),
-            // Mocking failed logins count if not explicitly tracked in audits yet
-            Promise.resolve(0)
+            this.auditLogModel.countDocuments({
+                action: 'LOGIN_FAILED',
+                createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+            })
         ]);
 
         return {
@@ -131,6 +133,26 @@ export class SuperAdminService {
                 delta: a.module,
                 time: a['createdAt'] // Format on frontend
             }))
+        };
+    }
+
+    async getNotifications() {
+        const [criticalAlerts, pendingTickets] = await Promise.all([
+            this.auditLogModel.find({ severity: 'CRITICAL' })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .select('action module details createdAt')
+                .exec(),
+            this.supportTicketModel.find({ status: 'open' })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .select('subject priority createdAt')
+                .exec()
+        ]);
+
+        return {
+            alerts: criticalAlerts,
+            tickets: pendingTickets
         };
     }
 

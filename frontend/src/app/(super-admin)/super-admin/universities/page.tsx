@@ -33,7 +33,8 @@ export default function UniversitiesManagementPage() {
         adminUsername: "",
         adminPassword: "",
         address: "",
-        subscriptionPlan: "basic"
+        subscriptionPlan: "basic",
+        enabledModules: [] as string[]
     });
 
     const fetchUniversities = async () => {
@@ -69,7 +70,8 @@ export default function UniversitiesManagementPage() {
                 adminUsername: "",
                 adminPassword: "",
                 address: "",
-                subscriptionPlan: "basic"
+                subscriptionPlan: "basic",
+                enabledModules: []
             });
             fetchUniversities();
         } catch (error: any) {
@@ -187,6 +189,7 @@ export default function UniversitiesManagementPage() {
                                             className="rounded-xl font-mono uppercase"
                                         />
                                     </div>
+
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-slate-500 uppercase">Initial Plan</label>
                                         <select
@@ -198,6 +201,28 @@ export default function UniversitiesManagementPage() {
                                             <option value="pro">Pro</option>
                                             <option value="enterprise">Enterprise</option>
                                         </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Enabled Modules</label>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        {['Academic', 'Hostel', 'Library', 'Transport', 'Placement', 'HR'].map(mod => (
+                                            <label key={mod} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg border hover:bg-slate-50">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={(formData.enabledModules || []).includes(mod)}
+                                                    onChange={(e) => {
+                                                        const current = formData.enabledModules || [];
+                                                        const updated = e.target.checked
+                                                            ? [...current, mod]
+                                                            : current.filter(m => m !== mod);
+                                                        setFormData({ ...formData, enabledModules: updated });
+                                                    }}
+                                                    className="rounded border-slate-300"
+                                                />
+                                                {mod}
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -467,6 +492,6 @@ export default function UniversitiesManagementPage() {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

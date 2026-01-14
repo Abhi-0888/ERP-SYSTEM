@@ -49,6 +49,12 @@ export class SuperAdminController {
         return this.superAdminService.getSecurityEvents();
     }
 
+    @Get('notifications')
+    @Roles(Role.SUPER_ADMIN)
+    getNotifications() {
+        return this.superAdminService.getNotifications();
+    }
+
     @Get('stats/sessions')
     @Roles(Role.SUPER_ADMIN)
     getActiveSessions() {

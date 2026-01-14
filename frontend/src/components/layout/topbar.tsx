@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -23,9 +24,23 @@ interface TopbarProps {
     onMenuClick: () => void;
 }
 
+import { SuperAdminService } from "@/lib/services/super-admin.service";
+
 export function Topbar({ onMenuClick }: TopbarProps) {
     const router = useRouter();
     const { user, activeRole, setActiveRole, logout } = useAuth();
+    const [notifications, setNotifications] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (activeRole === 'SUPER_ADMIN') {
+            SuperAdminService.getNotifications()
+                .then(res => {
+                    const combined = [...(res.data.alerts || []), ...(res.data.tickets || [])];
+                    setNotifications(combined);
+                })
+                .catch(err => console.error("Failed to load notifications", err));
+        }
+    }, [activeRole]);
 
     const handleLogout = () => {
         logout();
@@ -45,12 +60,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 lg:px-6">
             {/* Left: Menu button (mobile) + Search */}
             <div className="flex items-center gap-4">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="lg:hidden"
-                    onClick={onMenuClick}
-                >
+                <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
                     <Menu className="h-5 w-5" />
                 </Button>
 
@@ -73,14 +83,40 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 </Button>
 
                 {/* Notifications */}
-                <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
-                        3
-                    </span>
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="relative">
+                            <Bell className="h-5 w-5" />
+                            {notifications.length > 0 && (
+                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
+                                    {notifications.length}
+                                </span>
+                            )}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-80 p-0 rounded-xl shadow-xl border-slate-100">
+                        <DropdownMenuLabel className="p-4 border-b">
+                            <h4 className="font-bold text-slate-900">Notifications</h4>
+                        </DropdownMenuLabel>
+                        <div className="max-h-[300px] overflow-y-auto">
+                            {notifications.length > 0 ? (
+                                notifications.map((n: any, i) => (
+                                    <DropdownMenuItem key={i} className="flex flex-col items-start gap-1 p-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 cursor-pointer">
+                                        <div className="flex justify-between w-full">
+                                            <span className="font-bold text-xs text-slate-800">{n.subject || n.action}</span>
+                                            <span className="text-[10px] text-slate-400">{new Date(n.createdAt).toLocaleTimeString()}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 line-clamp-2">{n.details || n.module}</p>
+                                    </DropdownMenuItem>
+                                ))
+                            ) : (
+                                <div className="p-8 text-center text-slate-400 text-sm">No new alerts</div>
+                            )}
+                        </div>
+                    </DropdownMenuContent>
+                </DropdownMenu>
 
-                {/* Role Switcher (if multiple roles) */}
+                {/* Role Switcher */}
                 {user && user.roles.length > 1 && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

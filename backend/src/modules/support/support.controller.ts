@@ -16,6 +16,8 @@ export class SupportController {
         return this.supportService.findAll();
     }
 
+    @Patch(':id/status')
+    @Roles(Role.SUPER_ADMIN)
     updateStatus(@Param('id') id: string, @Body('status') status: string) {
         return this.supportService.updateStatus(id, status);
     }

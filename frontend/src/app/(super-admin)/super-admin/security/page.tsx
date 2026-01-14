@@ -10,6 +10,9 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
+} from "@/components/ui/dialog";
+import {
     ShieldAlert, Activity, Lock, Search, AlertTriangle, FileText, X,
     Terminal, Laptop, Globe, AlertCircle, RefreshCw, FileSearch, ShieldCheck,
     Filter, Download, Trash2, Ban
@@ -33,6 +36,7 @@ export default function SecurityCenterPage() {
     const [universities, setUniversities] = useState<any[]>([]);
     const [sessions, setSessions] = useState<any[]>([]);
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [selectedLog, setSelectedLog] = useState<any | null>(null);
 
     const [moduleFilter, setModuleFilter] = useState("ALL");
     const [severityFilter, setSeverityFilter] = useState("ALL");
@@ -208,7 +212,7 @@ export default function SecurityCenterPage() {
                                 <TableBody>
                                     {auditLogs.length > 0 ? (
                                         auditLogs.map((log: any) => (
-                                            <TableRow key={log._id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
+                                            <TableRow key={log._id} className="hover:bg-slate-50/50 transition-colors border-slate-50 cursor-pointer" onClick={() => setSelectedLog(log)}>
                                                 <TableCell className="font-mono text-xs text-slate-500">
                                                     {new Date(log.createdAt).toLocaleString()}
                                                 </TableCell>
@@ -382,6 +386,53 @@ export default function SecurityCenterPage() {
                     </div>
                 </div>
             </div>
+            {/* Log Details Dialog */}
+            <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+                <DialogContent className="max-w-2xl bg-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ShieldCheck className="h-5 w-5 text-slate-500" />
+                            Audit Log Details
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedLog && (
+                        <div className="space-y-4 text-sm">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Timestamp</label>
+                                    <p>{new Date(selectedLog.createdAt).toLocaleString()}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Severity</label>
+                                    <Badge className={selectedLog.severity === 'Info' ? 'bg-blue-500' : 'bg-orange-500'}>{selectedLog.severity}</Badge>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Actor</label>
+                                    <p className="font-mono">{selectedLog.username}</p>
+                                    <p className="text-xs text-slate-400">{selectedLog.userId}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">IP Address</label>
+                                    <p className="font-mono">{selectedLog.ipAddress || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase">Action Vector</label>
+                                <div className="flex gap-2">
+                                    <Badge variant="outline">{selectedLog.module}</Badge>
+                                    <Badge variant="outline">{selectedLog.action}</Badge>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase">Raw Payload</label>
+                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-mono text-xs overflow-x-auto">
+                                    <pre>{JSON.stringify(selectedLog, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
