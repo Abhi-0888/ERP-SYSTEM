@@ -21,6 +21,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { SupportModule } from './modules/support/support.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { AiModule } from './modules/ai/ai.module';
 import { AppController } from './app.controller';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -56,6 +57,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
         SupportModule,
         OnboardingModule,
         SuperAdminModule,
+        AiModule,
     ],
     controllers: [AppController],
     providers: [

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { AiChatPanel } from "@/components/ai-assistant/ai-chat-panel";
 
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -30,6 +31,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     const router = useRouter();
     const { user, activeRole, setActiveRole, logout } = useAuth();
     const [notifications, setNotifications] = useState<any[]>([]);
+    const [isAiOpen, setIsAiOpen] = useState(false);
 
     useEffect(() => {
         if (activeRole === 'SUPER_ADMIN') {
@@ -77,10 +79,17 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
                 {/* AI Assistant */}
-                <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex gap-2 border-purple-200 hover:bg-purple-50 hover:border-purple-400 transition-colors"
+                    onClick={() => setIsAiOpen(true)}
+                >
                     <Sparkles className="h-4 w-4 text-purple-500" />
-                    <span className="hidden lg:inline">AI Assistant</span>
+                    <span className="hidden lg:inline text-purple-700 font-medium">AI Assistant</span>
                 </Button>
+
+                <AiChatPanel isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} />
 
                 {/* Notifications */}
                 <DropdownMenu>
