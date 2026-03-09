@@ -3,7 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './user.schema';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { SuperAdminController } from './super-admin.controller';
 import { UniversityModule } from '../university/university.module';
 import { forwardRef } from '@nestjs/common';
 
@@ -12,7 +11,7 @@ import { forwardRef } from '@nestjs/common';
         MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
         forwardRef(() => UniversityModule),
     ],
-    controllers: [UserController, SuperAdminController],
+    controllers: [UserController],
     providers: [UserService],
     exports: [UserService],
 })

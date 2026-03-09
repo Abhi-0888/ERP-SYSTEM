@@ -26,9 +26,17 @@ export class CreateUserDto {
     @IsOptional()
     @IsString()
     universityId?: string;
+
+    @IsOptional()
+    @IsString()
+    departmentId?: string;
 }
 
 export class UpdateUserDto {
+    @IsOptional()
+    @IsString()
+    username?: string;
+
     @IsOptional()
     @IsEmail({}, { message: 'Email must be a valid email address' })
     email?: string;
@@ -43,8 +51,20 @@ export class UpdateUserDto {
     password?: string;
 
     @IsOptional()
+    @IsEnum(Role)
+    role?: Role;
+
+    @IsOptional()
+    @IsString()
+    departmentId?: string;
+
+    @IsOptional()
     @IsString()
     isActive?: boolean;
+
+    @IsOptional()
+    @IsString()
+    status?: string;
 }
 
 export class LoginDto {

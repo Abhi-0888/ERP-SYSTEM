@@ -1,13 +1,46 @@
-import api from "../api";
+import api from '../api';
+
+export interface Vehicle {
+    _id?: string;
+    id?: string;
+    plateNumber: string;
+    model: string;
+    type: string;
+    capacity: number;
+    status: string;
+    driverName?: string;
+    driverPhone?: string;
+}
+
+export interface Route {
+    _id?: string;
+    id?: string;
+    name: string;
+    source: string;
+    destination: string;
+    stops: { name: string; time: string }[];
+    fare: number;
+    isActive: boolean;
+}
 
 export const TransportService = {
-    getAllVehicles: () => api.get("/transport/vehicles"),
-    createVehicle: (data: any) => api.get("/transport/vehicles", data),
-    updateVehicle: (id: string, data: any) => api.patch(`/transport/vehicles/${id}`, data),
-    deleteVehicle: (id: string) => api.delete(`/transport/vehicles/${id}`),
+    getVehicles: async (): Promise<Vehicle[]> => {
+        const response = await api.get('/transport/vehicles');
+        return response.data;
+    },
 
-    getAllRoutes: () => api.get("/transport/routes"),
-    createRoute: (data: any) => api.post("/transport/routes", data),
-    updateRoute: (id: string, data: any) => api.patch(`/transport/routes/${id}`, data),
-    deleteRoute: (id: string) => api.delete(`/transport/routes/${id}`),
+    getRoutes: async (): Promise<Route[]> => {
+        const response = await api.get('/transport/routes');
+        return response.data;
+    },
+
+    createVehicle: async (data: any) => {
+        const response = await api.post('/transport/vehicles', data);
+        return response.data;
+    },
+
+    createRoute: async (data: any) => {
+        const response = await api.post('/transport/routes', data);
+        return response.data;
+    }
 };

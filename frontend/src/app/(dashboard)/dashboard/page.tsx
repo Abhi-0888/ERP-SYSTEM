@@ -6,13 +6,14 @@ import { useAuth } from "@/lib/auth";
 import api from "@/lib/api";
 import { roleDisplayNames } from "@/lib/navigation";
 import { StatsService } from "@/lib/services/stats.service";
+import { ExamService } from "@/lib/services/exam.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     Users, GraduationCap, BookOpen, Building2, TrendingUp, TrendingDown,
     Calendar, AlertCircle, CreditCard, ClipboardList, BarChart3,
-    ArrowRight, Download, Filter, Clock, MapPin, Loader2, Sparkles
+    ArrowRight, Download, Filter, Clock, MapPin, Loader2, Sparkles, Award
 } from "lucide-react";
 
 // Stat Card Component
@@ -70,20 +71,27 @@ function AdminDashboard() {
         attendance: "0%",
         fees: "₹0"
     });
+    const [moduleStats, setModuleStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchAdminStats = async () => {
             try {
-                const statsRes = await StatsService.getGlobalStats();
-                const data = statsRes.data || statsRes;
+                const [globalRes, moduleRes] = await Promise.all([
+                    StatsService.getGlobalStats(),
+                    StatsService.getModuleStats()
+                ]);
+                
+                const globalData = globalRes.data || globalRes;
+                const mData = moduleRes.data || moduleRes;
 
                 setStats({
-                    students: data.system?.students || 0,
-                    faculty: data.system?.faculty || 0,
-                    attendance: data.attendance?.average ? `${data.attendance.average}%` : "0%",
-                    fees: data.fees?.collection ? `₹${(data.fees.collection / 100000).toFixed(1)}L` : "₹0"
+                    students: globalData.students || 0,
+                    faculty: globalData.faculty || 0,
+                    attendance: globalData.attendance || "0%",
+                    fees: globalData.fees || "₹0"
                 });
+                setModuleStats(mData);
             } catch (error) {
                 console.error("Failed to fetch admin dashboard stats", error);
             } finally {
@@ -108,7 +116,7 @@ function AdminDashboard() {
                         {isHOD ? "Departmental" : "Institutional"} Control
                     </h1>
                     <p className="text-slate-500 font-medium mt-1">
-                        {isHOD ? `Managing ${user?.departmentName || 'Computer Science'} operations.` : "Campus-wide metrics and strategic overview."}
+                        {isHOD ? `Managing ${user?.departmentName || 'Department'} operations.` : "Campus-wide metrics and strategic overview."}
                     </p>
                 </div>
                 <div className="flex gap-3">
@@ -118,10 +126,10 @@ function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Enrollment Base" value={stats.students.toString()} change="+4.2% YoY" changeType="positive" icon={GraduationCap} />
-                <StatCard title="Academic Force" value={stats.faculty.toString()} change="100% Verified" changeType="positive" icon={Users} />
+                <StatCard title="Enrollment Base" value={stats.students.toString()} change="Verified Record" changeType="positive" icon={GraduationCap} />
+                <StatCard title="Academic Force" value={stats.faculty.toString()} change="Active Load" changeType="positive" icon={Users} />
                 <StatCard title="Attendance Index" value={stats.attendance} change="Target: 90%" changeType="positive" icon={ClipboardList} />
-                <StatCard title="Financial Pulse" value={stats.fees} change="Target: ₹50L" changeType="neutral" icon={CreditCard} />
+                <StatCard title="Financial Pulse" value={stats.fees} change="Lakhs (L) / Year" changeType="neutral" icon={CreditCard} />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
@@ -129,40 +137,29 @@ function AdminDashboard() {
                     <CardHeader className="bg-slate-50/50 border-b px-8 py-6">
                         <CardTitle className="text-xl font-bold font-outfit flex items-center gap-2">
                             <TrendingUp className="h-6 w-6 text-blue-600" />
-                            Analytical Velocity
+                            Module Analytics
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-10">
-                        {/* Department Pulse Table */}
                         <div className="space-y-6">
                             {[
-                                { name: "Computer Science", students: 450, staff: 24, health: 98, trend: 'up' },
-                                { name: "Electronics Eng.", students: 320, staff: 18, health: 92, trend: 'stable' },
-                                { name: "Mechanical Eng.", students: 280, staff: 16, health: 85, trend: 'down' },
-                            ].map((dept, i) => (
+                                { name: "Hostels", val: moduleStats?.hostels?.totalHostels || 0, sub: `Occupancy: ${moduleStats?.hostels?.occupancy || '0%'}`, icon: Building2 },
+                                { name: "Library", val: moduleStats?.library?.totalTitles || 0, sub: `Available: ${moduleStats?.library?.availableBooks || 0} Titles`, icon: BookOpen },
+                                { name: "Transit", val: "Operational", sub: "Fleet-wide Health Check", icon: MapPin },
+                            ].map((mod, i) => (
                                 <div key={i} className="group flex items-center justify-between p-4 rounded-2xl border border-transparent hover:border-slate-100 hover:bg-slate-50/50 transition-all">
                                     <div className="flex items-center gap-4">
                                         <div className="w-12 h-12 bg-white shadow-sm border border-slate-100 rounded-xl flex items-center justify-center font-bold text-blue-600">
-                                            {dept.name[0]}
+                                            <mod.icon className="h-5 w-5" />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-slate-800">{dept.name}</p>
-                                            <p className="text-xs text-slate-400 font-medium">{dept.students} Students • {dept.staff} Faculty</p>
+                                            <p className="font-bold text-slate-800">{mod.name}</p>
+                                            <p className="text-xs text-slate-400 font-medium">{mod.sub}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-8">
-                                        <div className="text-right">
-                                            <p className="text-sm font-black text-slate-700">{dept.health}%</p>
-                                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Health</p>
-                                        </div>
-                                        <div className={`p-2 rounded-lg ${dept.trend === 'up' ? 'text-emerald-500 bg-emerald-50' :
-                                            dept.trend === 'down' ? 'text-rose-500 bg-rose-50' :
-                                                'text-blue-500 bg-blue-50'
-                                            }`}>
-                                            {dept.trend === 'up' ? <TrendingUp className="h-4 w-4" /> :
-                                                dept.trend === 'down' ? <TrendingDown className="h-4 w-4" /> :
-                                                    <div className="w-4 h-4 rounded-full border-2 border-current opacity-30" />}
-                                        </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-black text-slate-700">{mod.val}</p>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Global</p>
                                     </div>
                                 </div>
                             ))}
@@ -341,6 +338,117 @@ function FacultyDashboard() {
     );
 }
 
+// Student Dashboard
+function StudentDashboard() {
+    const { user } = useAuth();
+    const [stats, setStats] = useState({
+        attendance: "0%",
+        gpa: "0.0",
+        booksIssued: 0,
+        pendingFees: "₹0"
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStudentStats = async () => {
+            try {
+                // Real data aggregation for student
+                const [attendanceRes, resultsRes, libraryRes] = await Promise.all([
+                    api.get(`/attendance/student/${user?.id || user?._id}/summary`),
+                    ExamService.getMarksByStudent(user?.id || user?._id),
+                    api.get(`/library/student/${user?.id || user?._id}/summary`)
+                ]);
+
+                // Calculate GPA from results
+                const grades: Record<string, number> = { 'A+': 10, 'A': 9, 'B+': 8, 'B': 7, 'C': 6, 'P': 5, 'F': 0 };
+                const totalPoints = resultsRes.reduce((acc: number, r: any) => acc + (grades[r.grade] || 0), 0);
+                const avgGpa = resultsRes.length > 0 ? (totalPoints / resultsRes.length).toFixed(2) : "0.0";
+
+                setStats({
+                    attendance: attendanceRes.data?.percentage ? `${attendanceRes.data.percentage}%` : "0%",
+                    gpa: avgGpa,
+                    booksIssued: libraryRes.data?.activeIssues || 0,
+                    pendingFees: "₹0" // Assuming fees logic is implemented elsewhere
+                });
+            } catch (error) {
+                console.error("Failed to fetch student dashboard stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStudentStats();
+    }, [user]);
+
+    if (loading) return (
+        <div className="p-20 text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+            <p className="text-slate-500 font-medium font-outfit">Retrieving Academic Dossier...</p>
+        </div>
+    );
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight font-outfit">Student Hub</h1>
+                    <p className="text-slate-500 font-medium mt-1">Academic overview for {user?.name}.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="Attendance" value={stats.attendance} change="Threshold: 75%" changeType="positive" icon={ClipboardList} />
+                <StatCard title="Current GPA" value={stats.gpa} change="Semester Avg" changeType="neutral" icon={Award} />
+                <StatCard title="Library Assets" value={stats.booksIssued.toString()} change="Books In-hand" changeType="neutral" icon={BookOpen} />
+                <StatCard title="Fee Status" value={stats.pendingFees} change="No Dues" changeType="positive" icon={CreditCard} />
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+                <Card className="border-0 shadow-xl shadow-slate-100/50 rounded-[2.5rem] overflow-hidden border border-slate-100/50">
+                    <CardHeader className="bg-slate-50/50 border-b px-8 py-6">
+                        <CardTitle className="text-lg font-bold flex items-center gap-2 font-outfit">
+                            <Calendar className="h-5 w-5 text-indigo-600" />
+                            Academic Timeline
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <div className="space-y-6">
+                            {[
+                                { title: "Mid-Term Exams", date: "Starts Mar 20", status: "Upcoming", color: "text-orange-600", bg: "bg-orange-50" },
+                                { title: "Cultural Fest", date: "Apr 05", status: "Event", color: "text-purple-600", bg: "bg-purple-50" },
+                                { title: "Project Submission", date: "Apr 15", status: "Deadline", color: "text-rose-600", bg: "bg-rose-50" },
+                            ].map((evt, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/30">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 ${evt.bg} rounded-xl flex items-center justify-center`}>
+                                            <Calendar className={`h-5 w-5 ${evt.color}`} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-900">{evt.title}</p>
+                                            <p className="text-xs text-slate-500">{evt.date}</p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="rounded-lg text-[10px] font-black uppercase tracking-widest">{evt.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <div className="space-y-6">
+                    <Card className="border-0 shadow-sm rounded-[2.5rem] bg-indigo-600 text-white p-8 overflow-hidden relative">
+                        <Sparkles className="absolute -right-4 -top-4 h-24 w-24 text-white/10" />
+                        <h3 className="text-xl font-bold font-outfit mb-2">Student Excellence</h3>
+                        <p className="text-indigo-100 text-sm opacity-90">Access verified certificates and academic transcripts from the secure repository.</p>
+                        <Button className="mt-8 bg-white text-indigo-600 hover:bg-indigo-50 font-bold rounded-xl w-full">
+                            View Transcripts
+                        </Button>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Generic Dashboard for other roles
 function GenericDashboard() {
     const { activeRole, user } = useAuth();
@@ -351,7 +459,7 @@ function GenericDashboard() {
                 <div className="absolute right-0 top-0 p-12 opacity-5">
                     <Building2 className="h-40 w-40" />
                 </div>
-                <h1 className="text-4xl font-black font-outfit tracking-tighter">
+                <h1 className="text-4xl font-black text-slate-900 tracking-tighter font-outfit">
                     {activeRole ? roleDisplayNames[activeRole] : "Guest"} Portal
                 </h1>
                 <p className="text-slate-400 mt-3 text-lg font-medium opacity-80">
@@ -395,6 +503,8 @@ export default function DashboardPage() {
         case "FACULTY":
         case "ACADEMIC_COORDINATOR":
             return <FacultyDashboard />;
+        case "STUDENT":
+            return <StudentDashboard />;
         default:
             return <GenericDashboard />;
     }

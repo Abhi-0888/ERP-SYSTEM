@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,24 +10,33 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    FileText, Plus, Calendar, TrendingUp, Award, Download
+    FileText, Plus, Calendar, TrendingUp, Award, Download, RefreshCw, Clock
 } from "lucide-react";
-
-const mockExams = [
-    { id: "1", name: "Mid Semester - Data Structures", course: "CS201", type: "mid", date: "2024-12-15", time: "9:00 AM", room: "Hall A", maxMarks: 50 },
-    { id: "2", name: "Internal Assessment 2 - DBMS", course: "CS301", type: "internal", date: "2024-12-10", time: "2:00 PM", room: "LH-302", maxMarks: 20 },
-    { id: "3", name: "Lab Exam - Web Development", course: "CS401", type: "lab", date: "2024-12-18", time: "10:00 AM", room: "Lab-201", maxMarks: 50 },
-];
-
-const mockResults = [
-    { course: "Data Structures", code: "CS201", type: "Internal 1", maxMarks: 20, obtained: 18, grade: "A" },
-    { course: "Database Systems", code: "CS301", type: "Internal 1", maxMarks: 20, obtained: 16, grade: "B+" },
-    { course: "Computer Networks", code: "CS401", type: "Mid Sem", maxMarks: 50, obtained: 42, grade: "A" },
-    { course: "Web Development", code: "CS501", type: "Lab", maxMarks: 50, obtained: 45, grade: "A+" },
-];
+import { ExamService, Exam, MarkSheet } from "@/lib/services/exam.service";
+import { toast } from "sonner";
 
 // Faculty/Admin View
 function FacultyExamsView() {
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchExams = async () => {
+        setLoading(true);
+        try {
+            const data = await ExamService.getExams();
+            setExams(data.exams);
+        } catch (error) {
+            console.error("Failed to fetch exams", error);
+            toast.error("Failed to load examinations");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchExams();
+    }, []);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -46,7 +56,7 @@ function FacultyExamsView() {
                         </div>
                         <div>
                             <p className="text-sm text-slate-500">Upcoming</p>
-                            <p className="text-xl font-bold">{mockExams.length}</p>
+                            <p className="text-xl font-bold">{exams.filter(e => e.status === 'scheduled').length}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -57,7 +67,7 @@ function FacultyExamsView() {
                         </div>
                         <div>
                             <p className="text-sm text-slate-500">Marks Pending</p>
-                            <p className="text-xl font-bold">2</p>
+                            <p className="text-xl font-bold">{exams.filter(e => e.status === 'completed').length}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -67,8 +77,8 @@ function FacultyExamsView() {
                             <Award className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">Avg Score</p>
-                            <p className="text-xl font-bold">72%</p>
+                            <p className="text-sm text-slate-500">Total Exams</p>
+                            <p className="text-xl font-bold">{exams.length}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -78,8 +88,8 @@ function FacultyExamsView() {
                             <Calendar className="h-5 w-5 text-orange-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-slate-500">This Month</p>
-                            <p className="text-xl font-bold">5</p>
+                            <p className="text-sm text-slate-500">Conducted</p>
+                            <p className="text-xl font-bold">{exams.filter(e => e.status === 'published').length}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -88,7 +98,7 @@ function FacultyExamsView() {
             {/* Exams Table */}
             <Card className="border-0 shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-lg">Upcoming Examinations</CardTitle>
+                    <CardTitle className="text-lg">Examination Records</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -98,29 +108,41 @@ function FacultyExamsView() {
                                 <TableHead>Course</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Date & Time</TableHead>
-                                <TableHead>Room</TableHead>
-                                <TableHead>Max Marks</TableHead>
-                                <TableHead>Action</TableHead>
+                                <TableHead>Venue</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {mockExams.map((exam) => (
-                                <TableRow key={exam.id}>
-                                    <TableCell className="font-medium">{exam.name}</TableCell>
-                                    <TableCell>{exam.course}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline">{exam.type}</Badge>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-20">
+                                        <RefreshCw className="h-8 w-8 animate-spin mx-auto text-slate-400" />
                                     </TableCell>
+                                </TableRow>
+                            ) : exams.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center py-20 text-slate-400">No examination records found.</TableCell>
+                                </TableRow>
+                            ) : exams.map((exam) => (
+                                <TableRow key={exam._id || exam.id}>
+                                    <TableCell className="font-medium">{exam.name}</TableCell>
+                                    <TableCell>{exam.courseId?.name || 'N/A'}</TableCell>
+                                    <TableCell className="capitalize">{exam.type}</TableCell>
                                     <TableCell>
-                                        <div>
-                                            <p>{exam.date}</p>
-                                            <p className="text-xs text-slate-500">{exam.time}</p>
+                                        <div className="text-sm">
+                                            <p className="font-medium">{new Date(exam.date).toLocaleDateString()}</p>
+                                            <p className="text-slate-500 text-xs">{exam.startTime}</p>
                                         </div>
                                     </TableCell>
                                     <TableCell>{exam.room}</TableCell>
-                                    <TableCell>{exam.maxMarks}</TableCell>
                                     <TableCell>
-                                        <Button size="sm" variant="outline">Enter Marks</Button>
+                                        <Badge variant={exam.status === 'scheduled' ? 'default' : exam.status === 'completed' ? 'secondary' : 'outline'}>
+                                            {exam.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button variant="ghost" size="sm">Manage</Button>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -134,111 +156,123 @@ function FacultyExamsView() {
 
 // Student View
 function StudentExamsView() {
+    const { user } = useAuth();
+    const [results, setResults] = useState<MarkSheet[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchResults = async () => {
+            if (!user?.id && !user?._id) return;
+            try {
+                const data = await ExamService.getMarksByStudent(user.id || user._id);
+                setResults(data);
+            } catch (error) {
+                console.error("Failed to fetch results", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchResults();
+    }, [user]);
+
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold">Exams & Results</h1>
-                <p className="text-slate-500">View exam schedule and your results</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold">My Examinations</h1>
+                    <p className="text-slate-500">View upcoming exams and academic performance</p>
+                </div>
             </div>
 
-            {/* Upcoming Exams */}
-            <Card className="border-0 shadow-sm">
-                <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Upcoming Exams
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                        {mockExams.map((exam) => (
-                            <div key={exam.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium">{exam.name}</p>
-                                    <p className="text-sm text-slate-500">{exam.course} • {exam.room}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-medium">{exam.date}</p>
-                                    <p className="text-sm text-slate-500">{exam.time}</p>
-                                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader>
+                            <CardTitle className="text-lg">Recent Performance</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Course</TableHead>
+                                        <TableHead>Exam Type</TableHead>
+                                        <TableHead>Marks</TableHead>
+                                        <TableHead>Grade</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center py-10">Loading results...</TableCell>
+                                        </TableRow>
+                                    ) : results.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center py-10 text-slate-400">No examination results available.</TableCell>
+                                        </TableRow>
+                                    ) : results.map((result, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell>
+                                                <div className="font-medium">{result.examId?.courseId?.name || 'Course'}</div>
+                                                <div className="text-xs text-slate-500">{result.examId?.name}</div>
+                                            </TableCell>
+                                            <TableCell className="capitalize">{result.examId?.type}</TableCell>
+                                            <TableCell>
+                                                <span className="font-bold">{result.marksObtained}</span>
+                                                <span className="text-slate-400"> / {result.examId?.maxMarks}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={result.grade.startsWith('A') ? 'bg-green-500' : 'bg-blue-500'}>
+                                                    {result.grade}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="space-y-6">
+                    <Card className="border-0 shadow-sm bg-indigo-600 text-white">
+                        <CardContent className="p-6">
+                            <Award className="h-10 w-10 mb-4 text-indigo-200" />
+                            <h3 className="text-xl font-bold">Academic Status</h3>
+                            <p className="text-indigo-100 text-sm mt-2">Overall CGPA: 8.42</p>
+                            <div className="mt-6 pt-6 border-t border-indigo-500/50">
+                                <Button className="w-full bg-white text-indigo-600 hover:bg-indigo-50">
+                                    <Download className="h-4 w-4 mr-2" /> Download Grade Card
+                                </Button>
                             </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
 
-            {/* Results */}
-            <Card className="border-0 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                        <Award className="h-5 w-5" />
-                        My Results
-                    </CardTitle>
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />Download
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Course</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Max Marks</TableHead>
-                                <TableHead>Obtained</TableHead>
-                                <TableHead>Grade</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {mockResults.map((result, i) => (
-                                <TableRow key={i}>
-                                    <TableCell>
-                                        <div>
-                                            <p className="font-medium">{result.course}</p>
-                                            <p className="text-xs text-slate-500">{result.code}</p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell><Badge variant="outline">{result.type}</Badge></TableCell>
-                                    <TableCell>{result.maxMarks}</TableCell>
-                                    <TableCell className="font-medium">{result.obtained}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={
-                                            result.grade.startsWith("A") ? "default" :
-                                                result.grade.startsWith("B") ? "secondary" : "outline"
-                                        }>
-                                            {result.grade}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            {/* Summary */}
-            <Card className="border-0 shadow-sm bg-gradient-to-r from-purple-500 to-blue-600 text-white">
-                <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-lg font-medium">Current CGPA</p>
-                            <p className="text-4xl font-bold mt-1">8.42</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-white/80">Semester GPA: 8.65</p>
-                            <p className="text-white/80">Credits Earned: 124/160</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader>
+                            <CardTitle className="text-sm uppercase tracking-wider text-slate-400">Exam Instructions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-sm space-y-4">
+                            <div className="flex gap-3">
+                                <Calendar className="h-4 w-4 text-slate-400 mt-1" />
+                                <p>Carry physical Hall Ticket and ID card for all exams.</p>
+                            </div>
+                            <div className="flex gap-3">
+                                <Clock className="h-4 w-4 text-slate-400 mt-1" />
+                                <p>Reporting time is 30 minutes prior to exam start.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }
 
 export default function ExamsPage() {
     const { activeRole } = useAuth();
+    const isInstitutional = ["SUPER_ADMIN", "UNIVERSITY_ADMIN", "REGISTRAR", "EXAM_CONTROLLER", "HOD", "FACULTY"].includes(activeRole || "");
 
-    if (activeRole === "FACULTY" || activeRole === "HOD" || activeRole === "UNIVERSITY_ADMIN") {
+    if (isInstitutional) {
         return <FacultyExamsView />;
     }
 

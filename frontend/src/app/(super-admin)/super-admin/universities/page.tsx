@@ -55,7 +55,7 @@ export default function UniversitiesManagementPage() {
     }, []);
 
     const handleCreate = async () => {
-        if (!formData.name || !formData.code || !formData.adminEmail || !formData.adminUsername || !formData.adminPassword) {
+        if (!formData.name || !formData.code || !formData.adminEmail || !formData.adminUsername || !formData.adminPassword || !formData.address) {
             toast.error("All credential fields are mandatory for provisioning");
             return;
         }
@@ -255,6 +255,15 @@ export default function UniversitiesManagementPage() {
                                             className="rounded-xl"
                                         />
                                     </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Address</label>
+                                    <Input
+                                        placeholder="Full Address"
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        className="rounded-xl"
+                                    />
                                 </div>
                                 <DialogFooter className="pt-4">
                                     <Button variant="ghost" onClick={() => setIsCreateDialogOpen(false)} className="rounded-xl">Cancel</Button>

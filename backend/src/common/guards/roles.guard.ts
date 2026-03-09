@@ -1,23 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '../enums/role.enum';
-
-const ROLE_RANK = {
-    [Role.SUPER_ADMIN]: 100,
-    [Role.UNIVERSITY_ADMIN]: 80,
-    [Role.REGISTRAR]: 60,
-    [Role.HOD]: 50,
-    [Role.ACADEMIC_COORDINATOR]: 45,
-    [Role.EXAM_CONTROLLER]: 40,
-    [Role.FINANCE]: 40,
-    [Role.ACCOUNTANT]: 35,
-    [Role.LIBRARIAN]: 30,
-    [Role.HOSTEL_WARDEN]: 30,
-    [Role.PLACEMENT_CELL]: 30,
-    [Role.PLACEMENT_OFFICER]: 25,
-    [Role.FACULTY]: 20,
-    [Role.STUDENT]: 10,
-};
+import { ROLE_RANKS } from '../constants/role-ranks';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -37,7 +21,7 @@ export class RolesGuard implements CanActivate {
         if (!user || !user.role) return false;
 
         // Hierarchical check: User ranks higher or equal to ANY of the required roles
-        const userRank = ROLE_RANK[user.role] || 0;
-        return requiredRoles.some((role) => userRank >= (ROLE_RANK[role] || 0));
+        const userRank = ROLE_RANKS[user.role] || 0;
+        return requiredRoles.some((role) => userRank >= (ROLE_RANKS[role] || 0));
     }
 }

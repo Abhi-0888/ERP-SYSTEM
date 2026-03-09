@@ -1,0 +1,21 @@
+import { Role } from './types';
+
+export const ROLE_AUTHORITY: Record<Role, number> = {
+    SUPER_ADMIN: 100,
+    UNIVERSITY_ADMIN: 80,
+    REGISTRAR: 70,
+    FINANCE: 70,
+    PRINCIPAL: 70,
+    EXAM_CONTROLLER: 60,
+    HOD: 60,
+    PLACEMENT_OFFICER: 50,
+    PLACEMENT_CELL: 50,
+    LIBRARIAN: 50,
+    HOSTEL_WARDEN: 50,
+    TRANSPORT_MANAGER: 50,
+    ACADEMIC_COORDINATOR: 40,
+    ACCOUNTANT: 40,
+    FACULTY: 30,
+    STUDENT: 10,
+    PARENT: 0,
+};

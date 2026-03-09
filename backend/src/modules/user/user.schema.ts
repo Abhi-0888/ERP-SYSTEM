@@ -18,6 +18,9 @@ export class User {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University', index: true })
     universityId: MongooseSchema.Types.ObjectId;
 
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', index: true })
+    departmentId: MongooseSchema.Types.ObjectId;
+
     @Prop({ default: false })
     isDeleted: boolean;
 
