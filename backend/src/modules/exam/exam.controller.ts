@@ -10,6 +10,7 @@ import {
     UseGuards,
     HttpException,
     HttpStatus,
+    Request,
 } from '@nestjs/common';
 import { ExamService } from './exam.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -29,9 +30,9 @@ export class ExamController {
 
     @Post()
     @Roles(Role.EXAM_CONTROLLER, Role.UNIVERSITY_ADMIN, Role.FACULTY)
-    async createExam(@Body() dto: CreateExamDto) {
+    async createExam(@Body() dto: CreateExamDto, @Request() req) {
         try {
-            return await this.examService.createExam(dto);
+            return await this.examService.createExam(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to create exam',
@@ -43,6 +44,7 @@ export class ExamController {
     @Get()
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.EXAM_CONTROLLER, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async findAllExams(
+        @Request() req,
         @Query('courseId') courseId?: string,
         @Query('academicYearId') academicYearId?: string,
         @Query('type') type?: string,
@@ -59,7 +61,7 @@ export class ExamController {
                 status: status as ExamStatus,
                 search
             };
-            return await this.examService.findAllExams(filter, page, limit);
+            return await this.examService.findAllExams(req.user, filter, page, limit);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch exams',
@@ -70,9 +72,9 @@ export class ExamController {
 
     @Get(':id')
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.EXAM_CONTROLLER, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
-    async findExam(@Param('id') id: string) {
+    async findExam(@Param('id') id: string, @Request() req) {
         try {
-            return await this.examService.findExamById(id);
+            return await this.examService.findExamById(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch exam',
@@ -83,9 +85,9 @@ export class ExamController {
 
     @Patch(':id')
     @Roles(Role.EXAM_CONTROLLER, Role.UNIVERSITY_ADMIN, Role.FACULTY)
-    async updateExam(@Param('id') id: string, @Body() dto: UpdateExamDto) {
+    async updateExam(@Param('id') id: string, @Body() dto: UpdateExamDto, @Request() req) {
         try {
-            return await this.examService.updateExam(id, dto);
+            return await this.examService.updateExam(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update exam',
@@ -96,9 +98,9 @@ export class ExamController {
 
     @Delete(':id')
     @Roles(Role.EXAM_CONTROLLER, Role.UNIVERSITY_ADMIN)
-    async deleteExam(@Param('id') id: string) {
+    async deleteExam(@Param('id') id: string, @Request() req) {
         try {
-            return await this.examService.deleteExam(id);
+            return await this.examService.deleteExam(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete exam',
@@ -111,9 +113,9 @@ export class ExamController {
 
     @Post(':examId/marks')
     @Roles(Role.FACULTY, Role.EXAM_CONTROLLER, Role.UNIVERSITY_ADMIN)
-    async recordMarks(@Param('examId') examId: string, @Body() marksDto: RecordExamMarksDto) {
+    async recordMarks(@Param('examId') examId: string, @Body() marksDto: RecordExamMarksDto, @Request() req) {
         try {
-            return await this.examService.recordMarks(examId, marksDto);
+            return await this.examService.recordMarks(req.user, examId, marksDto);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to record marks',
@@ -128,9 +130,10 @@ export class ExamController {
         @Param('examId') examId: string,
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
+        @Request() req,
     ) {
         try {
-            return await this.examService.getExamResults(examId, page, limit);
+            return await this.examService.getExamResults(req.user, examId, page, limit);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch results',

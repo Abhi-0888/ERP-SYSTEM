@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,22 +19,8 @@ import {
 } from "@/components/ui/select";
 import { GraduationCap, Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
 import { AcademicService } from "@/lib/services/academic.service";
-
-interface Department {
-    _id: string;
-    name: string;
-    code: string;
-}
-
-interface Program {
-    _id: string;
-    name: string;
-    code: string;
-    departmentId: Department | string; // Backend might populate
-    type: "BACHELOR" | "MASTER" | "DIPLOMA" | "PHD";
-    totalSemesters: number;
-    description?: string;
-}
+import { Program, Department } from "@/lib/types";
+import { toast } from "sonner";
 
 export default function ProgramsPage() {
     const [programs, setPrograms] = useState<Program[]>([]);
@@ -55,10 +41,10 @@ export default function ProgramsPage() {
         code: "",
         departmentId: "",
         totalSemesters: 8,
-        type: "BACHELOR" as "BACHELOR" | "MASTER" | "DIPLOMA" | "PHD"
+        type: "BACHELOR" as any
     });
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const [progsRes, deptsRes] = await Promise.all([
@@ -69,14 +55,15 @@ export default function ProgramsPage() {
             setDepartments(deptsRes.data || []);
         } catch (error) {
             console.error("Failed to fetch data", error);
+            toast.error("Failed to load program data");
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const filtered = programs.filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -85,7 +72,7 @@ export default function ProgramsPage() {
 
     const handleCreate = async () => {
         if (!formData.departmentId) {
-            alert("Please select a department");
+            toast.error("Please select a department");
             return;
         }
         setActionLoading(true);
@@ -93,9 +80,10 @@ export default function ProgramsPage() {
             await AcademicService.createProgram(formData);
             await fetchData();
             setIsCreateOpen(false);
-            setFormData({ name: "", code: "", departmentId: "", totalSemesters: 8, type: "BACHELOR" });
+            setFormData({ name: "", code: "", departmentId: "", totalSemesters: 8, type: "BACHELOR" as any });
+            toast.success("Program created successfully");
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to create program");
+            toast.error(error.response?.data?.message || "Failed to create program");
         } finally {
             setActionLoading(false);
         }
@@ -108,8 +96,9 @@ export default function ProgramsPage() {
             await AcademicService.updateProgram(selected._id, formData);
             await fetchData();
             setIsEditOpen(false);
+            toast.success("Program updated successfully");
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to update program");
+            toast.error(error.response?.data?.message || "Failed to update program");
         } finally {
             setActionLoading(false);
         }
@@ -122,8 +111,9 @@ export default function ProgramsPage() {
             await AcademicService.deleteProgram(selected._id);
             await fetchData();
             setIsDeleteOpen(false);
+            toast.success("Program deleted successfully");
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to delete program");
+            toast.error(error.response?.data?.message || "Failed to delete program");
         } finally {
             setActionLoading(false);
         }
@@ -134,15 +124,15 @@ export default function ProgramsPage() {
         setFormData({
             name: prog.name,
             code: prog.code,
-            departmentId: typeof prog.departmentId === 'object' ? prog.departmentId._id : prog.departmentId,
-            totalSemesters: prog.totalSemesters,
-            type: prog.type
+            departmentId: typeof prog.departmentId === 'object' ? (prog.departmentId as Department)._id : prog.departmentId,
+            totalSemesters: (prog as any).totalSemesters || 8,
+            type: (prog as any).type || "BACHELOR"
         });
         setIsEditOpen(true);
     };
 
     const getDeptName = (deptId: string | Department) => {
-        if (typeof deptId === 'object') return deptId.name;
+        if (typeof deptId === 'object') return (deptId as Department).name;
         const dept = departments.find(d => d._id === deptId);
         return dept ? dept.name : "Unknown Dept";
     };

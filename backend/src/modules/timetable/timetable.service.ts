@@ -1,20 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Timetable, TimetableDocument } from './timetable.schema';
 import { CreateTimetableDto, UpdateTimetableDto, CreateTimetableSlotDto, UpdateTimetableSlotDto } from './timetable.dto';
+import { Role } from '../../common/enums/role.enum';
+import { StudentProfile, StudentProfileDocument } from '../student/student-profile.schema';
 
 @Injectable()
 export class TimetableService {
     constructor(
         @InjectModel(Timetable.name)
         private timetableModel: Model<TimetableDocument>,
+        @InjectModel(StudentProfile.name)
+        private studentProfileModel: Model<StudentProfileDocument>,
     ) { }
 
-    async createTimetable(dto: CreateTimetableDto): Promise<Timetable> {
+    async createTimetable(dto: CreateTimetableDto, currentUser: any): Promise<Timetable> {
         try {
+            const universityId = currentUser.role === Role.SUPER_ADMIN ? (dto as any).universityId : currentUser.universityId;
+            if (!universityId) throw new BadRequestException('University ID is required');
+
             const timetable = new this.timetableModel({
                 ...dto,
+                universityId,
                 status: dto.status || 'DRAFT',
                 slots: [],
             });
@@ -24,10 +32,15 @@ export class TimetableService {
         }
     }
 
-    async findAllTimetables(page: number = 1, limit: number = 10, filters?: any): Promise<any> {
+    async findAllTimetables(currentUser: any, page: number = 1, limit: number = 10, filters?: any): Promise<any> {
         try {
             const skip = (page - 1) * limit;
-            const query = filters || {};
+            const query: any = filters || {};
+
+            // Isolation
+            if (currentUser.role !== Role.SUPER_ADMIN) {
+                query.universityId = currentUser.universityId;
+            }
 
             const timetables = await this.timetableModel
                 .find(query)
@@ -48,7 +61,7 @@ export class TimetableService {
         }
     }
 
-    async findTimetableById(id: string): Promise<Timetable> {
+    async findTimetableById(id: string, currentUser: any): Promise<TimetableDocument> {
         try {
             const timetable = await this.timetableModel
                 .findById(id)
@@ -59,26 +72,30 @@ export class TimetableService {
             if (!timetable) {
                 throw new NotFoundException('Timetable not found');
             }
-            return timetable;
-        } catch (error) {
-            throw error;
-        }
-    }
 
-    async updateTimetable(id: string, dto: UpdateTimetableDto): Promise<Timetable> {
-        try {
-            const timetable = await this.timetableModel.findByIdAndUpdate(id, dto, { new: true });
-            if (!timetable) {
-                throw new NotFoundException('Timetable not found');
+            // Isolation
+            if (currentUser.role !== Role.SUPER_ADMIN && timetable.universityId?.toString() !== currentUser.universityId.toString()) {
+                throw new ForbiddenException('Access denied');
             }
+
             return timetable;
         } catch (error) {
             throw error;
         }
     }
 
-    async deleteTimetable(id: string): Promise<any> {
+    async updateTimetable(id: string, dto: UpdateTimetableDto, currentUser: any): Promise<TimetableDocument> {
         try {
+            await this.findTimetableById(id, currentUser);
+            return this.timetableModel.findByIdAndUpdate(id, dto, { new: true });
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async deleteTimetable(id: string, currentUser: any): Promise<any> {
+        try {
+            await this.findTimetableById(id, currentUser);
             const timetable = await this.timetableModel.findByIdAndDelete(id);
             if (!timetable) {
                 throw new NotFoundException('Timetable not found');
@@ -89,19 +106,15 @@ export class TimetableService {
         }
     }
 
-    async addSlot(timetableId: string, slotDto: CreateTimetableSlotDto): Promise<Timetable> {
+    async addSlot(timetableId: string, slotDto: CreateTimetableSlotDto, currentUser: any): Promise<TimetableDocument> {
         try {
-            const timetable = await this.timetableModel.findById(timetableId);
-            if (!timetable) throw new NotFoundException('Timetable not found');
-
-            // initialize slots array if missing
-            if (!Array.isArray((timetable as any).slots)) (timetable as any).slots = [];
+            const timetable = await this.findTimetableById(timetableId, currentUser);
 
             // optional: check for conflicts
             const conflict = await this.checkSlotConflict(timetableId, slotDto);
-            if (conflict) throw new Error('Slot conflict detected');
+            if (conflict) throw new BadRequestException('Slot conflict detected');
 
-            (timetable as any).slots.push(slotDto as any);
+            timetable.slots.push(slotDto as any);
             await timetable.save();
             return timetable;
         } catch (error) {
@@ -109,17 +122,15 @@ export class TimetableService {
         }
     }
 
-    async updateSlot(timetableId: string, slotId: string, slotDto: UpdateTimetableSlotDto): Promise<Timetable> {
+    async updateSlot(timetableId: string, slotId: string, slotDto: UpdateTimetableSlotDto, currentUser: any): Promise<TimetableDocument> {
         try {
-            const timetable = await this.timetableModel.findById(timetableId);
-            if (!timetable) throw new NotFoundException('Timetable not found');
+            const timetable = await this.findTimetableById(timetableId, currentUser);
 
             // conflict check
             const conflict = await this.checkSlotConflict(timetableId, slotDto as any);
-            if (conflict) throw new Error('Slot conflict detected');
+            if (conflict) throw new BadRequestException('Slot conflict detected');
 
-            const slots = (timetable as any).slots || [];
-            const slot = slots.id ? slots.id(slotId) : slots.find((s: any) => String(s._id) === String(slotId));
+            const slot = (timetable.slots as any).id(slotId);
             if (!slot) throw new NotFoundException('Slot not found');
 
             Object.assign(slot, slotDto);
@@ -130,24 +141,47 @@ export class TimetableService {
         }
     }
 
-    async deleteSlot(timetableId: string, _slotId: string): Promise<any> {
+    async deleteSlot(timetableId: string, _slotId: string, currentUser: any): Promise<any> {
         try {
-            const timetable = await this.timetableModel.findById(timetableId);
-            if (!timetable) throw new NotFoundException('Timetable not found');
+            const timetable = await this.findTimetableById(timetableId, currentUser);
 
-            const slots = (timetable as any).slots || [];
-            const slot = slots.id ? slots.id(_slotId) : slots.find((s: any) => String(s._id) === String(_slotId));
+            const slot = (timetable.slots as any).id(_slotId);
             if (!slot) throw new NotFoundException('Slot not found');
 
-            // remove slot
-            if (typeof slot.remove === 'function') {
-                slot.remove();
-            } else {
-                (timetable as any).slots = slots.filter((s: any) => String(s._id) !== String(_slotId));
-            }
-
+            slot.remove();
             await timetable.save();
             return { message: 'Slot deleted successfully', timetable };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getTimetableForStudent(studentIdOrUserId: string, _currentUser: any): Promise<TimetableDocument> {
+        try {
+            // Find student profile
+            let student = await this.studentProfileModel.findById(studentIdOrUserId);
+            if (!student) {
+                student = await this.studentProfileModel.findOne({ userId: studentIdOrUserId });
+            }
+
+            if (!student) {
+                throw new NotFoundException('Student profile not found');
+            }
+
+            // Find timetable matching student's academic context
+            const timetable = await this.timetableModel.findOne({
+                programId: student.programId,
+                semester: student.currentSemester,
+                academicYearId: student.academicYearId,
+                status: 'PUBLISHED',
+            }).populate('slots.courseId', 'name code')
+              .populate('slots.facultyId', 'username email');
+
+            if (!timetable) {
+                throw new NotFoundException('No published timetable found for your program and semester');
+            }
+
+            return timetable;
         } catch (error) {
             throw error;
         }

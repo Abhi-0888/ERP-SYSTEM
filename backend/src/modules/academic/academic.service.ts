@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AcademicYear, AcademicYearDocument } from './academic-year.schema';
@@ -6,6 +6,7 @@ import { Department, DepartmentDocument } from './department.schema';
 import { Program, ProgramDocument } from './program.schema';
 import { Course, CourseDocument } from './course.schema';
 import { CreateAcademicYearDto, UpdateAcademicYearDto, CreateDepartmentDto, UpdateDepartmentDto, CreateProgramDto, UpdateProgramDto, CreateCourseDto, UpdateCourseDto } from './academic.dto';
+import { Role } from '../../common/enums/role.enum';
 
 @Injectable()
 export class AcademicService {
@@ -116,31 +117,43 @@ export class AcademicService {
 
     // ============= DEPARTMENT METHODS =============
 
-    async createDepartment(dto: CreateDepartmentDto): Promise<Department> {
+    async createDepartment(dto: CreateDepartmentDto, currentUser: any): Promise<Department> {
         try {
-            const existingDept = await this.departmentModel.findOne({ code: dto.code });
-            if (existingDept) {
-                throw new BadRequestException('Department with this code already exists');
+            // Isolation: Ensure universityId matches user's university if not super admin
+            const universityId = currentUser.role === Role.SUPER_ADMIN ? dto.universityId : currentUser.universityId;
+
+            if (!universityId) {
+                throw new BadRequestException('University ID is required');
             }
 
-            const department = new this.departmentModel(dto);
-            return await department.save();
+            const createdDept = new this.departmentModel({
+                ...dto,
+                universityId,
+            });
+            return createdDept.save();
         } catch (error) {
             throw error;
         }
     }
 
-    async findAllDepartments(page: number = 1, limit: number = 10): Promise<any> {
+    async findAllDepartments(currentUser: any, page: number = 1, limit: number = 10): Promise<any> {
         try {
             const skip = (page - 1) * limit;
+            const filter: any = {};
+
+            // Isolation: Filter by user's university if not super admin
+            if (currentUser.role !== Role.SUPER_ADMIN) {
+                filter.universityId = currentUser.universityId;
+            }
+
             const departments = await this.departmentModel
-                .find()
+                .find(filter)
                 .skip(skip)
                 .limit(limit)
-                .populate('headOfDepartment', 'name email')
+                .populate('hodId', 'username email')
                 .exec();
 
-            const total = await this.departmentModel.countDocuments();
+            const total = await this.departmentModel.countDocuments(filter);
 
             return {
                 data: departments,
@@ -151,34 +164,40 @@ export class AcademicService {
         }
     }
 
-    async findDepartmentById(id: string): Promise<Department> {
+    async findDepartmentById(id: string, currentUser: any): Promise<Department> {
         try {
-            const dept = await this.departmentModel.findById(id).populate('headOfDepartment', 'name email');
+            const dept = await this.departmentModel.findById(id).populate('hodId', 'username email');
             if (!dept) {
                 throw new NotFoundException('Department not found');
             }
+
+            // Isolation check
+            if (currentUser.role !== Role.SUPER_ADMIN && dept.universityId.toString() !== currentUser.universityId.toString()) {
+                throw new ForbiddenException('Access denied: You can only access departments within your university');
+            }
+
             return dept;
         } catch (error) {
             throw error;
         }
     }
 
-    async updateDepartment(id: string, dto: UpdateDepartmentDto): Promise<Department> {
+    async updateDepartment(id: string, dto: UpdateDepartmentDto, currentUser: any): Promise<Department> {
         try {
-            const dept = await this.departmentModel.findByIdAndUpdate(id, dto, { new: true }).populate('headOfDepartment', 'name email');
-            if (!dept) {
-                throw new NotFoundException('Department not found');
-            }
-            return dept;
+            await this.findDepartmentById(id, currentUser);
+            
+            return this.departmentModel.findByIdAndUpdate(id, dto, { new: true }).populate('hodId', 'username email');
         } catch (error) {
             throw error;
         }
     }
 
-    async deleteDepartment(id: string): Promise<any> {
+    async deleteDepartment(id: string, currentUser: any): Promise<any> {
         try {
-            const dept = await this.departmentModel.findByIdAndDelete(id);
-            if (!dept) {
+            await this.findDepartmentById(id, currentUser);
+            
+            const result = await this.departmentModel.findByIdAndDelete(id);
+            if (!result) {
                 throw new NotFoundException('Department not found');
             }
             return { message: 'Department deleted successfully' };
@@ -189,8 +208,11 @@ export class AcademicService {
 
     // ============= PROGRAM METHODS =============
 
-    async createProgram(dto: CreateProgramDto): Promise<Program> {
+    async createProgram(dto: CreateProgramDto, currentUser: any): Promise<Program> {
         try {
+            // Check if department belongs to the same university
+            await this.findDepartmentById(dto.departmentId, currentUser);
+
             const existingProgram = await this.programModel.findOne({ code: dto.code });
             if (existingProgram) {
                 throw new BadRequestException('Program with this code already exists');
@@ -203,10 +225,18 @@ export class AcademicService {
         }
     }
 
-    async findAllPrograms(departmentId?: string, page: number = 1, limit: number = 10): Promise<any> {
+    async findAllPrograms(currentUser: any, departmentId?: string, page: number = 1, limit: number = 10): Promise<any> {
         try {
             const skip = (page - 1) * limit;
-            const filter = departmentId ? { departmentId } : {};
+            const filter: any = {};
+
+            if (departmentId) {
+                await this.findDepartmentById(departmentId, currentUser);
+                filter.departmentId = departmentId;
+            } else if (currentUser.role !== Role.SUPER_ADMIN) {
+                const depts = await this.departmentModel.find({ universityId: currentUser.universityId }).select('_id').exec();
+                filter.departmentId = { $in: depts.map(d => d._id) };
+            }
 
             const programs = await this.programModel
                 .find(filter)
@@ -226,34 +256,38 @@ export class AcademicService {
         }
     }
 
-    async findProgramById(id: string): Promise<Program> {
+    async findProgramById(id: string, currentUser: any): Promise<Program> {
         try {
-            const program = await this.programModel.findById(id).populate('departmentId', 'name code');
+            const program = await this.programModel.findById(id).populate('departmentId', 'name code universityId');
             if (!program) {
                 throw new NotFoundException('Program not found');
             }
+
+            const dept = program.departmentId as any;
+            if (currentUser.role !== Role.SUPER_ADMIN && dept.universityId.toString() !== currentUser.universityId.toString()) {
+                throw new ForbiddenException('Access denied: You can only access programs within your university');
+            }
+
             return program;
         } catch (error) {
             throw error;
         }
     }
 
-    async updateProgram(id: string, dto: UpdateProgramDto): Promise<Program> {
+    async updateProgram(id: string, dto: UpdateProgramDto, currentUser: any): Promise<Program> {
         try {
-            const program = await this.programModel.findByIdAndUpdate(id, dto, { new: true }).populate('departmentId', 'name code');
-            if (!program) {
-                throw new NotFoundException('Program not found');
-            }
-            return program;
+            await this.findProgramById(id, currentUser);
+            return this.programModel.findByIdAndUpdate(id, dto, { new: true }).populate('departmentId', 'name code');
         } catch (error) {
             throw error;
         }
     }
 
-    async deleteProgram(id: string): Promise<any> {
+    async deleteProgram(id: string, currentUser: any): Promise<any> {
         try {
-            const program = await this.programModel.findByIdAndDelete(id);
-            if (!program) {
+            await this.findProgramById(id, currentUser);
+            const result = await this.programModel.findByIdAndDelete(id);
+            if (!result) {
                 throw new NotFoundException('Program not found');
             }
             return { message: 'Program deleted successfully' };
@@ -264,8 +298,10 @@ export class AcademicService {
 
     // ============= COURSE METHODS =============
 
-    async createCourse(dto: CreateCourseDto): Promise<Course> {
+    async createCourse(dto: CreateCourseDto, currentUser: any): Promise<Course> {
         try {
+            await this.findDepartmentById(dto.departmentId, currentUser);
+
             const existingCourse = await this.courseModel.findOne({ code: dto.code, semester: dto.semester });
             if (existingCourse) {
                 throw new BadRequestException('Course with this code already exists for this semester');
@@ -278,12 +314,19 @@ export class AcademicService {
         }
     }
 
-    async findAllCourses(programId?: string, semester?: number, page: number = 1, limit: number = 10): Promise<any> {
+    async findAllCourses(currentUser: any, programId?: string, semester?: number, page: number = 1, limit: number = 10): Promise<any> {
         try {
             const skip = (page - 1) * limit;
             const filter: any = {};
 
-            if (programId) filter.programId = programId;
+            if (programId) {
+                await this.findProgramById(programId, currentUser);
+                filter.programId = programId;
+            } else if (currentUser.role !== Role.SUPER_ADMIN) {
+                const depts = await this.departmentModel.find({ universityId: currentUser.universityId }).select('_id').exec();
+                filter.departmentId = { $in: depts.map(d => d._id) };
+            }
+
             if (semester) filter.semester = semester;
 
             const courses = await this.courseModel
@@ -291,6 +334,8 @@ export class AcademicService {
                 .skip(skip)
                 .limit(limit)
                 .populate('programId', 'name code')
+                .populate('departmentId', 'name code')
+                .populate('facultyId', 'username email')
                 .exec();
 
             const total = await this.courseModel.countDocuments(filter);
@@ -304,34 +349,38 @@ export class AcademicService {
         }
     }
 
-    async findCourseById(id: string): Promise<Course> {
+    async findCourseById(id: string, currentUser: any): Promise<Course> {
         try {
-            const course = await this.courseModel.findById(id).populate('programId', 'name code');
+            const course = await this.courseModel.findById(id).populate('programId', 'name code').populate('departmentId', 'name code universityId');
             if (!course) {
                 throw new NotFoundException('Course not found');
             }
+
+            const dept = course.departmentId as any;
+            if (currentUser.role !== Role.SUPER_ADMIN && dept.universityId.toString() !== currentUser.universityId.toString()) {
+                throw new ForbiddenException('Access denied: You can only access courses within your university');
+            }
+
             return course;
         } catch (error) {
             throw error;
         }
     }
 
-    async updateCourse(id: string, dto: UpdateCourseDto): Promise<Course> {
+    async updateCourse(id: string, dto: UpdateCourseDto, currentUser: any): Promise<Course> {
         try {
-            const course = await this.courseModel.findByIdAndUpdate(id, dto, { new: true }).populate('programId', 'name code');
-            if (!course) {
-                throw new NotFoundException('Course not found');
-            }
-            return course;
+            await this.findCourseById(id, currentUser);
+            return this.courseModel.findByIdAndUpdate(id, dto, { new: true }).populate('programId', 'name code');
         } catch (error) {
             throw error;
         }
     }
 
-    async deleteCourse(id: string): Promise<any> {
+    async deleteCourse(id: string, currentUser: any): Promise<any> {
         try {
-            const course = await this.courseModel.findByIdAndDelete(id);
-            if (!course) {
+            await this.findCourseById(id, currentUser);
+            const result = await this.courseModel.findByIdAndDelete(id);
+            if (!result) {
                 throw new NotFoundException('Course not found');
             }
             return { message: 'Course deleted successfully' };
@@ -340,20 +389,31 @@ export class AcademicService {
         }
     }
 
-    async getCoursesByProgram(programId: string): Promise<Course[]> {
+    async getCoursesByProgram(programId: string, currentUser: any): Promise<Course[]> {
         try {
-            return await this.courseModel.find({ programId }).sort({ semester: 1 });
+            await this.findProgramById(programId, currentUser);
+            return await this.courseModel.find({ programId }).sort({ semester: 1 }).populate('facultyId', 'username email').exec();
         } catch (error) {
             throw error;
         }
     }
 
-    async generateAcademicYearReport(): Promise<any> {
+    async generateAcademicYearReport(currentUser: any): Promise<any> {
         try {
+            const filter: any = {};
+            if (currentUser.role !== Role.SUPER_ADMIN) {
+                filter.universityId = currentUser.universityId;
+            }
+
             const activeYear = await this.academicYearModel.findOne({ isActive: true });
-            const totalDepartments = await this.departmentModel.countDocuments();
-            const totalPrograms = await this.programModel.countDocuments();
-            const totalCourses = await this.courseModel.countDocuments();
+            
+            // Isolation counts
+            const depts = await this.departmentModel.find(filter).select('_id').exec();
+            const deptIds = depts.map(d => d._id);
+            
+            const totalDepartments = deptIds.length;
+            const totalPrograms = await this.programModel.countDocuments({ departmentId: { $in: deptIds } });
+            const totalCourses = await this.courseModel.countDocuments({ departmentId: { $in: deptIds } });
 
             return {
                 activeYear,

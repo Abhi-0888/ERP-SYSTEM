@@ -184,6 +184,9 @@ export class CreateCourseDto {
     programId: string;
 
     @IsString()
+    departmentId: string;
+
+    @IsString()
     @IsOptional()
     description?: string;
 

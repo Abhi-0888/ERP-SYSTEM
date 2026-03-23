@@ -6,7 +6,7 @@ import { User, UserDocument } from '../user/user.schema';
 import { Attendance, AttendanceDocument } from '../attendance/attendance.schema';
 import { Transaction, TransactionDocument } from '../fee/fee.schema';
 import { Hostel, HostelDocument, Room, RoomDocument } from '../hostel/hostel.schema';
-import { Book, BookDocument, BookIssue, BookIssueDocument } from '../library/library.schema';
+import { Book, BookDocument } from '../library/library.schema';
 
 @Injectable()
 export class StatsService {

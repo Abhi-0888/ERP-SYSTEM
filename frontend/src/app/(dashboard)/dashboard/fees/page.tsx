@@ -222,7 +222,7 @@ function AdminFeesView() {
                                 <Select value={formData.academicYearId} onValueChange={(v) => setFormData({ ...formData, academicYearId: v })}>
                                     <SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger>
                                     <SelectContent>
-                                        {academicYears.map(y => <SelectItem key={y._id} value={y._id}>{y.name}</SelectItem>)}
+                                        {academicYears.map(y => <SelectItem key={y._id} value={y._id}>{y.year}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>

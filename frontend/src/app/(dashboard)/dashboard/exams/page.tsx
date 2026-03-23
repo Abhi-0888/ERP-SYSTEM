@@ -12,8 +12,9 @@ import {
 import {
     FileText, Plus, Calendar, TrendingUp, Award, Download, RefreshCw, Clock
 } from "lucide-react";
-import { ExamService, Exam, MarkSheet } from "@/lib/services/exam.service";
+import { ExamService } from "@/lib/services/exam.service";
 import { toast } from "sonner";
+import { Exam, MarkSheet } from "@/lib/types";
 
 // Faculty/Admin View
 function FacultyExamsView() {
@@ -24,10 +25,11 @@ function FacultyExamsView() {
         setLoading(true);
         try {
             const data = await ExamService.getExams();
-            setExams(data.exams);
+            setExams(Array.isArray(data.exams) ? data.exams : []);
         } catch (error) {
             console.error("Failed to fetch exams", error);
             toast.error("Failed to load examinations");
+            setExams([]);
         } finally {
             setLoading(false);
         }
@@ -162,10 +164,11 @@ function StudentExamsView() {
 
     useEffect(() => {
         const fetchResults = async () => {
-            if (!user?.id && !user?._id) return;
+            const studentId = user?._id;
+            if (!studentId) return;
             try {
-                const data = await ExamService.getMarksByStudent(user.id || user._id);
-                setResults(data);
+                const data = await ExamService.getMarksByStudent(studentId);
+                setResults(data.data || []);
             } catch (error) {
                 console.error("Failed to fetch results", error);
             } finally {
@@ -173,7 +176,7 @@ function StudentExamsView() {
             }
         };
         fetchResults();
-    }, [user]);
+    }, [user?._id]);
 
     return (
         <div className="space-y-6">

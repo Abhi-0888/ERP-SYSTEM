@@ -10,6 +10,7 @@ import {
     UseGuards,
     HttpException,
     HttpStatus,
+    Request,
 } from '@nestjs/common';
 import { TimetableService } from './timetable.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -29,9 +30,9 @@ export class TimetableController {
 
     @Post()
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD)
-    async createTimetable(@Body() dto: CreateTimetableDto) {
+    async createTimetable(@Body() dto: CreateTimetableDto, @Request() req) {
         try {
-            return await this.timetableService.createTimetable(dto);
+            return await this.timetableService.createTimetable(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to create timetable',
@@ -43,6 +44,7 @@ export class TimetableController {
     @Get()
     @Roles(Role.STUDENT, Role.FACULTY, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async findAllTimetables(
+        @Request() req,
         @Query('academicYearId') academicYearId?: string,
         @Query('programId') programId?: string,
         @Query('status') status?: string,
@@ -55,7 +57,7 @@ export class TimetableController {
             if (programId) filters.programId = programId;
             if (status) filters.status = status;
 
-            return await this.timetableService.findAllTimetables(page, limit, filters);
+            return await this.timetableService.findAllTimetables(req.user, page, limit, filters);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch timetables',
@@ -66,9 +68,9 @@ export class TimetableController {
 
     @Get(':id')
     @Roles(Role.STUDENT, Role.FACULTY, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
-    async getTimetable(@Param('id') id: string) {
+    async getTimetable(@Param('id') id: string, @Request() req) {
         try {
-            return await this.timetableService.findTimetableById(id);
+            return await this.timetableService.findTimetableById(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch timetable',
@@ -77,11 +79,24 @@ export class TimetableController {
         }
     }
 
+    @Get('student/:studentId')
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    async getTimetableForStudent(@Param('studentId') studentId: string, @Request() req) {
+        try {
+            return await this.timetableService.getTimetableForStudent(studentId, req.user);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to fetch timetable for student',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
     @Patch(':id')
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD)
-    async updateTimetable(@Param('id') id: string, @Body() dto: UpdateTimetableDto) {
+    async updateTimetable(@Param('id') id: string, @Body() dto: UpdateTimetableDto, @Request() req) {
         try {
-            return await this.timetableService.updateTimetable(id, dto);
+            return await this.timetableService.updateTimetable(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update timetable',
@@ -92,9 +107,9 @@ export class TimetableController {
 
     @Delete(':id')
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
-    async deleteTimetable(@Param('id') id: string) {
+    async deleteTimetable(@Param('id') id: string, @Request() req) {
         try {
-            return await this.timetableService.deleteTimetable(id);
+            return await this.timetableService.deleteTimetable(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete timetable',
@@ -103,13 +118,13 @@ export class TimetableController {
         }
     }
 
-    // ============= TIMETABLE SLOT MANAGEMENT =============
+    // ============= SLOT MANAGEMENT =============
 
-    @Post(':timetableId/slots')
+    @Post(':id/slots')
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD)
-    async addSlot(@Param('timetableId') timetableId: string, @Body() slotDto: CreateTimetableSlotDto) {
+    async addSlot(@Param('id') id: string, @Body() dto: CreateTimetableSlotDto, @Request() req) {
         try {
-            return await this.timetableService.addSlot(timetableId, slotDto);
+            return await this.timetableService.addSlot(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to add slot',
@@ -118,15 +133,16 @@ export class TimetableController {
         }
     }
 
-    @Patch(':timetableId/slots/:slotId')
+    @Patch(':id/slots/:slotId')
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD)
     async updateSlot(
-        @Param('timetableId') timetableId: string,
+        @Param('id') id: string,
         @Param('slotId') slotId: string,
-        @Body() slotDto: UpdateTimetableSlotDto,
+        @Body() dto: UpdateTimetableSlotDto,
+        @Request() req,
     ) {
         try {
-            return await this.timetableService.updateSlot(timetableId, slotId, slotDto);
+            return await this.timetableService.updateSlot(id, slotId, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update slot',
@@ -135,11 +151,11 @@ export class TimetableController {
         }
     }
 
-    @Delete(':timetableId/slots/:slotId')
+    @Delete(':id/slots/:slotId')
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD)
-    async deleteSlot(@Param('timetableId') timetableId: string, @Param('slotId') slotId: string) {
+    async deleteSlot(@Param('id') id: string, @Param('slotId') slotId: string, @Request() req) {
         try {
-            return await this.timetableService.deleteSlot(timetableId, slotId);
+            return await this.timetableService.deleteSlot(id, slotId, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete slot',

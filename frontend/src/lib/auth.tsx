@@ -38,29 +38,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     const sortRoles = (roles: Role[]) => {
         return [...roles].sort((a, b) => (ROLE_RANK[a] ?? 99) - (ROLE_RANK[b] ?? 99));
     };
 
+    // Initial load from localStorage
     useEffect(() => {
-        const storedUser = localStorage.getItem("educore_user");
-        const storedRole = localStorage.getItem("educore_role");
+        const initializeAuth = () => {
+            const storedUser = localStorage.getItem("educore_user");
+            const storedRole = localStorage.getItem("educore_role");
 
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
+            if (storedUser) {
+                try {
+                    const parsedUser = JSON.parse(storedUser);
+                    
+                    // Defer state updates to avoid "set-state-in-effect" warning
+                    setTimeout(() => {
+                        setUser(parsedUser);
+                        setIsAuthenticated(true);
 
-            // Default to stored role, or highest rank role if not set or invalid
-            const defaultRole = (storedRole as Role);
-            if (defaultRole && parsedUser.roles.includes(defaultRole)) {
-                setActiveRole(defaultRole);
-            } else {
-                const sorted = sortRoles(parsedUser.roles);
-                setActiveRole(sorted[0]);
+                        const defaultRole = (storedRole as Role);
+                        if (defaultRole && parsedUser.roles.includes(defaultRole)) {
+                            setActiveRole(defaultRole);
+                        } else {
+                            const sorted = sortRoles(parsedUser.roles);
+                            setActiveRole(sorted[0]);
+                        }
+                        setIsLoading(false);
+                    }, 0);
+                    return; // Exit to avoid synchronous setIsLoading(false)
+                } catch (error) {
+                    console.error("Failed to parse saved user", error);
+                    localStorage.removeItem("educore_user");
+                    localStorage.removeItem("educore_role");
+                }
             }
-        }
-        setIsLoading(false);
+            setIsLoading(false);
+        };
+
+        initializeAuth();
     }, []);
 
     const login = async (username: string, password: string) => {

@@ -10,6 +10,7 @@ import {
     UseGuards,
     HttpException,
     HttpStatus,
+    Request,
 } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -29,9 +30,9 @@ export class AttendanceController {
 
     @Post()
     @Roles(Role.FACULTY, Role.HOD, Role.UNIVERSITY_ADMIN)
-    async markAttendance(@Body() dto: MarkAttendanceDto) {
+    async markAttendance(@Body() dto: MarkAttendanceDto, @Request() req) {
         try {
-            return await this.attendanceService.markAttendance(dto);
+            return await this.attendanceService.markAttendance(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to mark attendance',
@@ -42,9 +43,9 @@ export class AttendanceController {
 
     @Post('bulk')
     @Roles(Role.FACULTY, Role.HOD, Role.UNIVERSITY_ADMIN)
-    async markBulkAttendance(@Body('attendance') dtos: MarkAttendanceDto[]) {
+    async markBulkAttendance(@Body('attendance') dtos: MarkAttendanceDto[], @Request() req) {
         try {
-            return await this.attendanceService.markBulkAttendance(dtos);
+            return await this.attendanceService.markBulkAttendance(dtos, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to mark attendance',
@@ -58,6 +59,7 @@ export class AttendanceController {
     @Get()
     @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async findAttendance(
+        @Request() req,
         @Query('studentId') studentId?: string,
         @Query('courseId') courseId?: string,
         @Query('status') status?: string,
@@ -74,7 +76,7 @@ export class AttendanceController {
                 startDate: startDate ? new Date(startDate) : undefined,
                 endDate: endDate ? new Date(endDate) : undefined,
             };
-            return await this.attendanceService.findAttendance(filter, page, limit);
+            return await this.attendanceService.findAttendance(req.user, filter, page, limit);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch attendance records',
@@ -87,10 +89,11 @@ export class AttendanceController {
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR)
     async getStudentAttendance(
         @Param('studentId') studentId: string,
+        @Request() req,
         @Query('courseId') courseId?: string,
     ) {
         try {
-            return await this.attendanceService.getStudentAttendance(studentId, courseId);
+            return await this.attendanceService.getStudentAttendance(req.user, studentId, courseId);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch student attendance',
@@ -99,26 +102,11 @@ export class AttendanceController {
         }
     }
 
-    @Get('course/:courseId/summary')
-    @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR)
-    async getCourseAttendanceSummary(@Param('courseId') courseId: string) {
-        try {
-            return await this.attendanceService.getCourseAttendanceSummary(courseId);
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'Failed to fetch course attendance summary',
-                HttpStatus.INTERNAL_SERVER_ERROR,
-            );
-        }
-    }
-
-    // ============= ATTENDANCE UPDATE =============
-
     @Patch(':id')
     @Roles(Role.FACULTY, Role.HOD, Role.UNIVERSITY_ADMIN)
-    async updateAttendance(@Param('id') id: string, @Body() dto: UpdateAttendanceDto) {
+    async updateAttendance(@Param('id') id: string, @Body() dto: UpdateAttendanceDto, @Request() req) {
         try {
-            return await this.attendanceService.updateAttendance(id, dto);
+            return await this.attendanceService.updateAttendance(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update attendance',
@@ -128,10 +116,10 @@ export class AttendanceController {
     }
 
     @Delete(':id')
-    @Roles(Role.FACULTY, Role.HOD, Role.UNIVERSITY_ADMIN)
-    async deleteAttendance(@Param('id') id: string) {
+    @Roles(Role.UNIVERSITY_ADMIN, Role.HOD)
+    async deleteAttendance(@Param('id') id: string, @Request() req) {
         try {
-            return await this.attendanceService.deleteAttendance(id);
+            return await this.attendanceService.deleteAttendance(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete attendance',
@@ -140,24 +128,37 @@ export class AttendanceController {
         }
     }
 
-    // ============= REPORTS =============
+    @Get('course/:courseId/summary')
+    @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR)
+    async getCourseAttendanceSummary(@Param('courseId') courseId: string, @Request() req) {
+        try {
+            return await this.attendanceService.getCourseAttendanceSummary(req.user, courseId);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to fetch course attendance summary',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
 
     @Get('reports/summary')
-    @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR)
-    async generateReport(
+    @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
+    async generateAttendanceReport(
+        @Request() req,
         @Query('studentId') studentId?: string,
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string,
     ) {
         try {
             return await this.attendanceService.generateAttendanceReport(
+                req.user,
                 studentId,
                 startDate ? new Date(startDate) : undefined,
                 endDate ? new Date(endDate) : undefined,
             );
         } catch (error) {
             throw new HttpException(
-                error.message || 'Failed to generate report',
+                error.message || 'Failed to generate attendance report',
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }

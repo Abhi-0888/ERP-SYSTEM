@@ -1,62 +1,60 @@
 import api from '../api';
-
-export interface Student {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    registrationNumber: string;
-    programId: any; // Populated or ID
-    academicYearId: any; // Populated or ID
-    status: string;
-    dateOfBirth: string;
-    enrollmentDate: string;
-    // ... add other fields as needed
-}
+import { Student, ApiResponse } from '../types';
 
 export interface StudentStats {
-    total: number;
-    active: number;
-    graduated: number;
-    suspended: number;
+    totalStudents: number;
+    activeStudents: number;
+    suspendedStudents: number;
+    graduatedStudents: number;
 }
 
 export const StudentService = {
     // Get all students with optional filters
-    getAll: async (params?: any) => {
+    getAll: async (params?: Record<string, string | number | boolean>): Promise<ApiResponse<Student[]>> => {
         const response = await api.get('/students', { params });
         return response.data;
     },
 
     // Get student by ID
-    getById: async (id: string) => {
+    getById: async (id: string): Promise<Student> => {
         const response = await api.get(`/students/${id}`);
         return response.data;
     },
 
     // Create new student
-    create: async (data: any) => {
+    create: async (data: Partial<Student>): Promise<Student> => {
         const response = await api.post('/students', data);
         return response.data;
     },
 
     // Update student
-    update: async (id: string, data: any) => {
+    update: async (id: string, data: Partial<Student>): Promise<Student> => {
         const response = await api.patch(`/students/${id}`, data);
         return response.data;
     },
 
     // Delete student
-    delete: async (id: string) => {
+    delete: async (id: string): Promise<{ message: string }> => {
         const response = await api.delete(`/students/${id}`);
         return response.data;
     },
 
-    // Get student stats (mock or real if endpoint exists)
-    // We can aggregate this from the list or use a specific report endpoint
-    getStats: async () => {
+    // Get students by course enrollment
+    getByCourse: async (courseId: string): Promise<Student[]> => {
+        const response = await api.get(`/students/course/${courseId}`);
+        return response.data;
+    },
+
+    // Get student stats
+    getStats: async (): Promise<StudentStats> => {
         // This endpoint was seen in controller: GET /students/reports/summary
         const response = await api.get('/students/reports/summary');
+        return response.data;
+    },
+
+    // Add this for enrollments page
+    updateEnrollment: async (id: string, data: { courseIds: string[] }): Promise<Student> => {
+        const response = await api.patch(`/students/${id}/enrollment`, data);
         return response.data;
     }
 };

@@ -1,167 +1,141 @@
-// Role and User type definitions for EduCore ERP
+export type Role = 'SUPER_ADMIN' | 'UNIVERSITY_ADMIN' | 'REGISTRAR' | 'ACCOUNTANT' | 'EXAM_CONTROLLER' | 'HOD' | 'FACULTY' | 'STUDENT';
 
-export type Role =
-    | 'SUPER_ADMIN'
-    | 'UNIVERSITY_ADMIN'
-    | 'REGISTRAR'
-    | 'PRINCIPAL'
-    | 'HOD'
-    | 'ACADEMIC_COORDINATOR'
-    | 'FACULTY'
-    | 'STUDENT'
-    | 'PARENT'
-    | 'EXAM_CONTROLLER'
-    | 'FINANCE'
-    | 'LIBRARIAN'
-    | 'ACCOUNTANT'
-    | 'HOSTEL_WARDEN'
-    | 'TRANSPORT_MANAGER'
-    | 'PLACEMENT_CELL'
-    | 'PLACEMENT_OFFICER';
-
-export type User = {
-    _id?: string;
-    id: string;
-    name: string;
+export interface User {
+    _id: string;
+    username: string;
     email: string;
-    avatar?: string;
-    universityId?: string;
-    universityName?: string;
-    departmentId?: string;
-    departmentName?: string;
+    role: Role;
     roles: Role[];
-    universityStatus?: 'setup' | 'active' | 'suspended';
-    onboardingStage?: number;
-};
+    universityId?: string;
+    departmentId?: string;
+    isActive: boolean;
+}
 
-export interface LoginResponse {
-    access_token: string;
-    user: {
-        id: string;
-        username: string;
-        role: Role;
-        universityId: string;
-        universityStatus?: 'setup' | 'active' | 'suspended';
-        onboardingStage?: number;
+export interface ApiResponse<T> {
+    data: T;
+    pagination?: {
+        total: number;
+        page: number;
+        limit: number;
+        pages: number;
     };
-}
-
-export type AuthState = {
-    user: User | null;
-    activeRole: Role | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-};
-
-export interface NavItem {
-    title: string;
-    href: string;
-    icon: string;
-    badge?: number;
-}
-
-export interface NavGroup {
-    title: string;
-    items: NavItem[];
-}
-
-// Entity types
-export interface University {
-    id: string;
-    name: string;
-    code: string;
-    email: string;
-    phone: string;
-    address: string;
-    status: 'active' | 'inactive';
-    plan: 'basic' | 'pro' | 'enterprise';
-    createdAt: string;
+    message?: string;
 }
 
 export interface Department {
-    id: string;
+    _id: string;
     name: string;
     code: string;
-    hodName: string;
-    status: 'active' | 'inactive';
+    universityId: string;
+    hodId?: string | User;
+    description?: string;
+    isActive: boolean;
 }
 
-export interface Student {
-    id: string;
+export interface Program {
+    _id: string;
     name: string;
-    email: string;
-    enrollmentNo: string;
-    program: string;
-    semester: number;
-    batch: string;
-    status: 'active' | 'graduated' | 'dropped';
-    attendance: number;
-    cgpa: number;
+    code: string;
+    departmentId: string | Department;
+    duration: number;
+    description?: string;
 }
 
 export interface Course {
-    id: string;
+    _id: string;
     name: string;
     code: string;
-    program: string;
-    semester: number;
+    departmentId: string | Department;
+    programId: string | Program;
     credits: number;
-    faculty: string;
+    semester: number;
+    facultyId?: string | User;
 }
 
-export interface Attendance {
-    id: string;
-    studentId: string;
-    studentName: string;
-    courseId: string;
-    date: string;
-    status: 'present' | 'absent' | 'late' | 'leave';
+export interface AcademicYear {
+    _id: string;
+    year: string;
+    startDate: string | Date;
+    endDate: string | Date;
+    isActive: boolean;
+}
+
+export interface Student {
+    _id: string;
+    userId: string | User;
+    firstName: string;
+    lastName: string;
+    enrollmentNo: string;
+    programId: string | Program;
+    departmentId: string | Department;
+    academicYearId: string | AcademicYear;
+    currentSemester: number;
+    enrolledCourses: (string | Course)[];
+    status: 'Active' | 'Suspended' | 'Graduated' | 'Withdrawn';
 }
 
 export interface Exam {
-    id: string;
+    _id: string;
     name: string;
-    course: string;
-    type: 'internal' | 'mid' | 'end';
-    date: string;
-    maxMarks: number;
+    courseId: string | Course;
+    academicYearId: string | AcademicYear;
+    type: 'INTERNAL' | 'EXTERNAL' | 'PRACTICAL';
+    totalMarks: number;
+    passingMarks: number;
+    examDate: string | Date;
+    startTime: string | Date;
+    endTime: string | Date;
+    status: 'Scheduled' | 'In-Progress' | 'Completed' | 'Cancelled';
 }
 
-export interface FeeStructure {
-    id: string;
-    name: string;
-    program: string;
-    type: 'tuition' | 'hostel' | 'library' | 'transport';
-    amount: number;
-    dueDate: string;
+export interface Timetable {
+    _id: string;
+    programId: string | Program;
+    academicYearId: string | AcademicYear;
+    semester: number;
+    status: 'DRAFT' | 'PUBLISHED';
+    slots: {
+        _id?: string;
+        day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+        startTime: string;
+        endTime: string;
+        courseId: string | Course;
+        facultyId: string | User;
+        room: string;
+    }[];
 }
 
-export interface Transaction {
-    id: string;
-    studentName: string;
-    amount: number;
-    date: string;
-    method: 'cash' | 'card' | 'upi' | 'bank';
-    status: 'completed' | 'pending' | 'failed';
-    receiptNo: string;
+export interface MarkSheet {
+    _id?: string;
+    studentId: string | Student;
+    examId: string | Exam;
+    marksObtained: number;
+    grade: string;
+    comments?: string;
+    recordedBy: string | User;
 }
 
-export interface Book {
-    id: string;
-    title: string;
-    author: string;
-    isbn: string;
-    category: string;
-    available: number;
-    total: number;
+export interface AttendanceRecord {
+    _id: string;
+    studentId: string | Student;
+    courseId: string | Course;
+    date: string | Date;
+    status: 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE';
+    remarks?: string;
 }
 
-export interface JobPost {
-    id: string;
-    company: string;
-    title: string;
-    package: string;
-    eligibility: string;
-    lastDate: string;
-    status: 'open' | 'closed';
+export interface AttendanceSummary {
+    studentId: string;
+    totalClasses: number;
+    presentClasses: number;
+    absentClasses: number;
+    attendancePercentage: number;
+    records: AttendanceRecord[];
+}
+
+export interface AuthState {
+    user: User | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    activeRole: Role | null;
 }

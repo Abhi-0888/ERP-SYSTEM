@@ -10,6 +10,7 @@ import {
     Query,
     HttpException,
     HttpStatus,
+    Request,
 } from '@nestjs/common';
 import { AcademicService } from './academic.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -112,9 +113,9 @@ export class AcademicController {
 
     @Post('departments')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
-    async createDepartment(@Body() dto: CreateDepartmentDto) {
+    async createDepartment(@Body() dto: CreateDepartmentDto, @Request() req) {
         try {
-            return await this.academicService.createDepartment(dto);
+            return await this.academicService.createDepartment(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to create department',
@@ -128,9 +129,10 @@ export class AcademicController {
     async findAllDepartments(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
+        @Request() req,
     ) {
         try {
-            return await this.academicService.findAllDepartments(page, limit);
+            return await this.academicService.findAllDepartments(req.user, page, limit);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch departments',
@@ -141,9 +143,9 @@ export class AcademicController {
 
     @Get('departments/:id')
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
-    async getDepartment(@Param('id') id: string) {
+    async getDepartment(@Param('id') id: string, @Request() req) {
         try {
-            return await this.academicService.findDepartmentById(id);
+            return await this.academicService.findDepartmentById(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch department',
@@ -154,9 +156,9 @@ export class AcademicController {
 
     @Patch('departments/:id')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.HOD)
-    async updateDepartment(@Param('id') id: string, @Body() dto: UpdateDepartmentDto) {
+    async updateDepartment(@Param('id') id: string, @Body() dto: UpdateDepartmentDto, @Request() req) {
         try {
-            return await this.academicService.updateDepartment(id, dto);
+            return await this.academicService.updateDepartment(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update department',
@@ -167,9 +169,9 @@ export class AcademicController {
 
     @Delete('departments/:id')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN)
-    async deleteDepartment(@Param('id') id: string) {
+    async deleteDepartment(@Param('id') id: string, @Request() req) {
         try {
-            return await this.academicService.deleteDepartment(id);
+            return await this.academicService.deleteDepartment(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete department',
@@ -182,9 +184,9 @@ export class AcademicController {
 
     @Post('programs')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD)
-    async createProgram(@Body() dto: CreateProgramDto) {
+    async createProgram(@Body() dto: CreateProgramDto, @Request() req) {
         try {
-            return await this.academicService.createProgram(dto);
+            return await this.academicService.createProgram(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to create program',
@@ -196,12 +198,13 @@ export class AcademicController {
     @Get('programs')
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async findAllPrograms(
+        @Request() req,
         @Query('departmentId') departmentId?: string,
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
     ) {
         try {
-            return await this.academicService.findAllPrograms(departmentId, page, limit);
+            return await this.academicService.findAllPrograms(req.user, departmentId, page, limit);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch programs',
@@ -212,9 +215,9 @@ export class AcademicController {
 
     @Get('programs/:id')
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
-    async getProgram(@Param('id') id: string) {
+    async getProgram(@Param('id') id: string, @Request() req) {
         try {
-            return await this.academicService.findProgramById(id);
+            return await this.academicService.findProgramById(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch program',
@@ -225,9 +228,9 @@ export class AcademicController {
 
     @Patch('programs/:id')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.HOD)
-    async updateProgram(@Param('id') id: string, @Body() dto: UpdateProgramDto) {
+    async updateProgram(@Param('id') id: string, @Body() dto: UpdateProgramDto, @Request() req) {
         try {
-            return await this.academicService.updateProgram(id, dto);
+            return await this.academicService.updateProgram(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update program',
@@ -238,9 +241,9 @@ export class AcademicController {
 
     @Delete('programs/:id')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN)
-    async deleteProgram(@Param('id') id: string) {
+    async deleteProgram(@Param('id') id: string, @Request() req) {
         try {
-            return await this.academicService.deleteProgram(id);
+            return await this.academicService.deleteProgram(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete program',
@@ -253,9 +256,9 @@ export class AcademicController {
 
     @Post('courses')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.HOD, Role.FACULTY)
-    async createCourse(@Body() dto: CreateCourseDto) {
+    async createCourse(@Body() dto: CreateCourseDto, @Request() req) {
         try {
-            return await this.academicService.createCourse(dto);
+            return await this.academicService.createCourse(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to create course',
@@ -267,13 +270,14 @@ export class AcademicController {
     @Get('courses')
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async findAllCourses(
+        @Request() req,
         @Query('programId') programId?: string,
         @Query('semester') semester?: number,
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
     ) {
         try {
-            return await this.academicService.findAllCourses(programId, semester, page, limit);
+            return await this.academicService.findAllCourses(req.user, programId, semester, page, limit);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch courses',
@@ -284,9 +288,9 @@ export class AcademicController {
 
     @Get('courses/program/:programId')
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
-    async getCoursesByProgram(@Param('programId') programId: string) {
+    async getCoursesByProgram(@Param('programId') programId: string, @Request() req) {
         try {
-            return await this.academicService.getCoursesByProgram(programId);
+            return await this.academicService.getCoursesByProgram(programId, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch courses',
@@ -297,9 +301,9 @@ export class AcademicController {
 
     @Get('courses/:id')
     @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
-    async getCourse(@Param('id') id: string) {
+    async getCourse(@Param('id') id: string, @Request() req) {
         try {
-            return await this.academicService.findCourseById(id);
+            return await this.academicService.findCourseById(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch course',
@@ -310,9 +314,9 @@ export class AcademicController {
 
     @Patch('courses/:id')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.HOD, Role.FACULTY)
-    async updateCourse(@Param('id') id: string, @Body() dto: UpdateCourseDto) {
+    async updateCourse(@Param('id') id: string, @Body() dto: UpdateCourseDto, @Request() req) {
         try {
-            return await this.academicService.updateCourse(id, dto);
+            return await this.academicService.updateCourse(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update course',
@@ -323,9 +327,9 @@ export class AcademicController {
 
     @Delete('courses/:id')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.HOD)
-    async deleteCourse(@Param('id') id: string) {
+    async deleteCourse(@Param('id') id: string, @Request() req) {
         try {
-            return await this.academicService.deleteCourse(id);
+            return await this.academicService.deleteCourse(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete course',
@@ -338,9 +342,9 @@ export class AcademicController {
 
     @Get('reports/overview')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
-    async getAcademicYearReport() {
+    async getAcademicYearReport(@Request() req) {
         try {
-            return await this.academicService.generateAcademicYearReport();
+            return await this.academicService.generateAcademicYearReport(req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to generate report',

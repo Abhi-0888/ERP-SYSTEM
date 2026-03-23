@@ -57,7 +57,7 @@ export class OnboardingController {
                     code: dept.code,
                     universityId,
                     description: dept.description,
-                });
+                }, req.user);
                 createdDepts.push(created);
             } catch (err: any) {
                 errors.push(`Department "${dept.name}": ${err.message}`);
@@ -78,7 +78,7 @@ export class OnboardingController {
                     duration: prog.duration || 4,
                     level: prog.level || 'UG',
                     description: prog.description,
-                });
+                }, req.user);
                 createdPrograms.push(created);
             } catch (err: any) {
                 errors.push(`Program "${prog.name}": ${err.message}`);
@@ -122,7 +122,7 @@ export class OnboardingController {
                     universityId,
                     phoneNumber: staff.phoneNumber,
                     isActive: true,
-                });
+                }, req.user);
                 createdStaff.push({
                     id: (created as any)._id,
                     username: staff.username,
@@ -238,7 +238,7 @@ export class OnboardingController {
 
     @Post('import')
     @Roles(Role.UNIVERSITY_ADMIN)
-    async setupImport(@Request() req: any, @Body() importData: any) {
+    async setupImport(@Request() req: any, @Body() _importData: any) {
         // Stage 5: Finalize Import
         const universityId = req.user.universityId;
         const status = await this.onboardingService.getStatus(universityId);
@@ -251,7 +251,7 @@ export class OnboardingController {
         for (const [type, data] of Object.entries(existingImports) as [string, any][]) {
             if (data.records && data.records.length > 0) {
                 try {
-                    const processed = await this.processImportedRecords(universityId, type, data.records);
+                    const processed = await this.processImportedRecords(req.user, type, data.records);
                     results[type] = {
                         imported: processed.success,
                         failed: processed.failed,
@@ -275,10 +275,11 @@ export class OnboardingController {
         return this.onboardingService.updateStage(universityId, 5, stageData);
     }
 
-    private async processImportedRecords(universityId: string, type: string, records: any[]) {
+    private async processImportedRecords(currentUser: any, type: string, records: any[]) {
         let success = 0;
         let failed = 0;
         const errors: string[] = [];
+        const universityId = currentUser.universityId;
 
         for (const record of records) {
             try {
@@ -291,7 +292,7 @@ export class OnboardingController {
                             role: Role.FACULTY,
                             universityId,
                             isActive: true,
-                        });
+                        }, currentUser);
                         success++;
                         break;
                     case 'students':
@@ -304,7 +305,7 @@ export class OnboardingController {
                             role: Role.STUDENT,
                             universityId,
                             isActive: true,
-                        });
+                        }, currentUser);
                         success++;
                         break;
                     case 'courses':

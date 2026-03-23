@@ -10,6 +10,7 @@ import {
     UseGuards,
     HttpException,
     HttpStatus,
+    Request,
 } from '@nestjs/common';
 import { FeeService } from './fee.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -28,9 +29,9 @@ export class FeeController {
 
     @Post()
     @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
-    async createFeeStructure(@Body() dto: CreateFeeDto) {
+    async createFeeStructure(@Body() dto: CreateFeeDto, @Request() req) {
         try {
-            return await this.feeService.createFeeStructure(dto);
+            return await this.feeService.createFeeStructure(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to create fee structure',
@@ -42,6 +43,7 @@ export class FeeController {
     @Get()
     @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async findAllFees(
+        @Request() req,
         @Query('academicYearId') academicYearId?: string,
         @Query('type') type?: string,
         @Query('status') status?: string,
@@ -56,7 +58,7 @@ export class FeeController {
                 status: status as FeeStatus,
                 search
             };
-            return await this.feeService.findAllFees(filter, page, limit);
+            return await this.feeService.findAllFees(req.user, filter, page, limit);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch fees',
@@ -67,9 +69,9 @@ export class FeeController {
 
     @Get(':id')
     @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
-    async getFee(@Param('id') id: string) {
+    async getFee(@Param('id') id: string, @Request() req) {
         try {
-            return await this.feeService.findFeeById(id);
+            return await this.feeService.findFeeById(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch fee',
@@ -80,9 +82,9 @@ export class FeeController {
 
     @Patch(':id')
     @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
-    async updateFee(@Param('id') id: string, @Body() dto: UpdateFeeDto) {
+    async updateFee(@Param('id') id: string, @Body() dto: UpdateFeeDto, @Request() req) {
         try {
-            return await this.feeService.updateFee(id, dto);
+            return await this.feeService.updateFee(id, dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update fee',
@@ -93,9 +95,9 @@ export class FeeController {
 
     @Delete(':id')
     @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
-    async deleteFee(@Param('id') id: string) {
+    async deleteFee(@Param('id') id: string, @Request() req) {
         try {
-            return await this.feeService.deleteFee(id);
+            return await this.feeService.deleteFee(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete fee',
@@ -104,13 +106,13 @@ export class FeeController {
         }
     }
 
-    // ============= STUDENT FEE ASSIGNMENT =============
+    // ============= STUDENT FEE ENDPOINTS =============
 
     @Post('assign')
     @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
-    async assignFeeToStudent(@Body() dto: AssignFeeToStudentDto) {
+    async assignFee(@Body() dto: AssignFeeToStudentDto, @Request() req) {
         try {
-            return await this.feeService.assignFeeToStudent(dto);
+            return await this.feeService.assignFeeToStudent(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to assign fee',
@@ -119,31 +121,11 @@ export class FeeController {
         }
     }
 
-    @Get('student/:studentId/status')
-    @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
-    async getStudentFeeStatus(
-        @Param('studentId') studentId: string,
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
-    ) {
-        try {
-            return await this.feeService.getStudentFeeStatus(studentId, page, limit);
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'Failed to fetch fee status',
-                HttpStatus.INTERNAL_SERVER_ERROR,
-            );
-        }
-    }
-
-    // ============= PAYMENT ENDPOINTS =============
-
     @Post('payment')
-    @Roles(Role.ACCOUNTANT, Role.STUDENT)
-    async recordPayment(@Body() dto: RecordPaymentDto) {
+    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN, Role.STUDENT)
+    async recordPayment(@Body() dto: RecordPaymentDto, @Request() req) {
         try {
-            // In real scenario, extract studentId from JWT token
-            return await this.feeService.recordPayment(dto.feeId, dto);
+            return await this.feeService.recordPayment(dto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to record payment',
@@ -152,15 +134,15 @@ export class FeeController {
         }
     }
 
-    @Post('student/:studentId/payment')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
-    async recordStudentPayment(@Param('studentId') studentId: string, @Body() dto: RecordPaymentDto) {
+    @Get('student/:studentId')
+    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN, Role.STUDENT, Role.REGISTRAR)
+    async getStudentFees(@Param('studentId') studentId: string, @Request() req) {
         try {
-            return await this.feeService.recordPayment(studentId, dto);
+            return await this.feeService.getStudentFees(studentId, req.user);
         } catch (error) {
             throw new HttpException(
-                error.message || 'Failed to record payment',
-                HttpStatus.BAD_REQUEST,
+                error.message || 'Failed to fetch student fees',
+                HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
     }

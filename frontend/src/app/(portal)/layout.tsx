@@ -15,7 +15,6 @@ export default function PortalLayout({
 }) {
     const { user, activeRole, isLoading } = useAuth();
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     useEffect(() => {
@@ -36,10 +35,10 @@ export default function PortalLayout({
                 router.push("/dashboard");
                 return;
             }
-
-            setIsAuthorized(true);
         }
     }, [user, activeRole, isLoading, router]);
+
+    const isAuthorized = !isLoading && user && (activeRole === "STUDENT" || activeRole === "PARENT") && user.universityStatus !== 'setup';
 
     if (isLoading || !isAuthorized) {
         return (

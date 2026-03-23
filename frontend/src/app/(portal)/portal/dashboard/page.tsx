@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
-import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-    GraduationCap, BookOpen, Calendar, CreditCard, ClipboardList,
-    TrendingUp, Clock, MapPin, Briefcase, Sparkles
+    GraduationCap, BookOpen, CreditCard, ClipboardList,
+    TrendingUp, Clock, Sparkles
 } from "lucide-react";
+import { ExamService } from "@/lib/services/exam.service";
+import { AttendanceService } from "@/lib/services/attendance.service";
+import { TimetableService } from "@/lib/services/timetable.service";
+import { toast } from "sonner";
+import { Timetable } from "@/lib/types";
 
 // Stat Card Component (Scoped to Portal style)
 function StatCard({
@@ -55,47 +59,50 @@ function StatCard({
 
 export default function StudentPortalDashboard() {
     const { user } = useAuth();
+    const [schedule, setSchedule] = useState<Timetable['slots']>([]);
     const [stats, setStats] = useState({
         attendance: "88%",
         cgpa: "8.6",
-        pendingFees: "₹0",
-        books: 1
+        fees: "Pending",
+        books: 2
     });
-    const [schedule, setSchedule] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchStudentData = async () => {
-            if (!user?.id) return;
-            try {
-                const timetableRes = await api.get(`/timetable/student/${user.id}`);
-                const timetables = timetableRes.data.timetables || [];
-                const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-                let todayClasses: any[] = [];
+    const fetchDashboardData = useCallback(async () => {
+        if (!user?._id) return;
+        setLoading(true);
+        try {
+            const [examsRes, attendanceRes, timetableRes] = await Promise.all([
+                ExamService.getMarksByStudent(user._id),
+                AttendanceService.getStudentAttendance(user._id),
+                TimetableService.getTimetableForStudent(user._id)
+            ]);
 
-                timetables.forEach((t: any) => {
-                    if (t.slots && Array.isArray(t.slots)) {
-                        const todaysSlots = t.slots.filter((s: any) => s.day === todayStr);
-                        todayClasses = [...todayClasses, ...todaysSlots];
-                    }
-                });
-                setSchedule(todayClasses.sort((a, b) => a.startTime.localeCompare(b.startTime)));
-
-                // Mocking fee status for portal view
-                setStats(prev => ({
-                    ...prev,
-                    attendance: "88%",
-                    cgpa: "8.6",
-                    books: 2
-                }));
-            } catch (error) {
-                console.error("Failed to fetch student data", error);
-            } finally {
-                setLoading(false);
+            // Process schedule for UI
+            const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+            let todayClasses: Timetable['slots'] = [];
+            if (timetableRes && Array.isArray(timetableRes.slots)) {
+                todayClasses = timetableRes.slots.filter((s) => s.day === todayStr);
             }
-        };
-        fetchStudentData();
-    }, [user?.id]);
+            setSchedule(todayClasses.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')));
+
+            setStats({
+                attendance: attendanceRes ? `${attendanceRes.attendancePercentage}%` : "88%",
+                cgpa: "8.6",
+                fees: "Paid",
+                books: 2
+            });
+        } catch (error) {
+            console.error("Dashboard data fetch error:", error);
+            toast.error("Failed to sync dashboard data");
+        } finally {
+            setLoading(false);
+        }
+    }, [user?._id]);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -125,7 +132,7 @@ export default function StudentPortalDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard title="Attendance" value={stats.attendance} change="Safe (>75%)" changeType="positive" icon={ClipboardList} />
                 <StatCard title="Merit Rank" value={stats.cgpa} change="Top 10% in Dept" changeType="positive" icon={GraduationCap} />
-                <StatCard title="Fee Status" value={stats.pendingFees} change="Due in 12 days" changeType="neutral" icon={CreditCard} />
+                <StatCard title="Fee Status" value={stats.fees} change="Due in 12 days" changeType="neutral" icon={CreditCard} />
                 <StatCard title="Library" value={stats.books.toString()} change="Items Issued" changeType="neutral" icon={BookOpen} />
             </div>
 
@@ -147,7 +154,7 @@ export default function StudentPortalDashboard() {
                                             <BookOpen className="h-7 w-7 text-indigo-600 group-hover/item:text-white" />
                                         </div>
                                         <div>
-                                            <p className="font-extrabold text-slate-900 text-lg">{cls.subject || "Major Elective"}</p>
+                                            <p className="font-extrabold text-slate-900 text-lg">{typeof cls.courseId === 'object' ? cls.courseId.name : (cls.subject || "Major Elective")}</p>
                                             <p className="text-sm text-slate-500 font-bold">{cls.startTime} - {cls.endTime}</p>
                                         </div>
                                     </div>

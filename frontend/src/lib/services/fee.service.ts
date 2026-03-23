@@ -50,56 +50,56 @@ export interface FeeFilter {
 
 export const FeeService = {
     // Fee Structure management
-    getFeeStructures: async (filter: FeeFilter = {}) => {
+    getFeeStructures: async (filter: FeeFilter = {}): Promise<ApiResponse<FeeStructure[]>> => {
         const response = await api.get('/fees', { params: filter });
         return response.data;
     },
 
-    getFeeStructure: async (id: string) => {
+    getFeeStructure: async (id: string): Promise<FeeStructure> => {
         const response = await api.get(`/fees/${id}`);
         return response.data;
     },
 
-    createFeeStructure: async (data: any) => {
+    createFeeStructure: async (data: Partial<FeeStructure>): Promise<FeeStructure> => {
         const response = await api.post('/fees', data);
         return response.data;
     },
 
-    updateFeeStructure: async (id: string, data: any) => {
+    updateFeeStructure: async (id: string, data: Partial<FeeStructure>): Promise<FeeStructure> => {
         const response = await api.patch(`/fees/${id}`, data);
         return response.data;
     },
 
-    deleteFeeStructure: async (id: string) => {
+    deleteFeeStructure: async (id: string): Promise<{ message: string }> => {
         const response = await api.delete(`/fees/${id}`);
         return response.data;
     },
 
     // Student Fee Assignment & Status
-    assignFeeToStudent: async (data: { studentId: string; feeId: string; customAmount?: number; remarks?: string }) => {
+    assignFeeToStudent: async (data: { studentId: string; feeId: string; customAmount?: number; remarks?: string }): Promise<unknown> => {
         const response = await api.post('/fees/assign', data);
         return response.data;
     },
 
-    getStudentFeeStatus: async (studentId: string, page: number = 1, limit: number = 10) => {
+    getStudentFeeStatus: async (studentId: string, page: number = 1, limit: number = 10): Promise<ApiResponse<unknown>> => {
         const response = await api.get(`/fees/student/${studentId}/status`, { params: { page, limit } });
         return response.data;
     },
 
     // Payment recording
-    recordPayment: async (feeId: string, data: { amountPaid: number; paymentMethod: PaymentMethod; transactionId?: string; remarks?: string; paymentDate?: string }) => {
+    recordPayment: async (feeId: string, data: { amountPaid: number; paymentMethod: PaymentMethod; transactionId?: string; remarks?: string; paymentDate?: string }): Promise<unknown> => {
         const response = await api.post('/fees/payment', { feeId, ...data });
         return response.data;
     },
 
-    recordStudentPayment: async (studentId: string, data: { feeId: string; amountPaid: number; paymentMethod: PaymentMethod; transactionId?: string; remarks?: string; paymentDate?: string }) => {
+    recordStudentPayment: async (studentId: string, data: { feeId: string; amountPaid: number; paymentMethod: PaymentMethod; transactionId?: string; remarks?: string; paymentDate?: string }): Promise<unknown> => {
         const response = await api.post(`/fees/student/${studentId}/payment`, data);
         return response.data;
     },
 
     // Reports
-    getFeeReport: async (academicYearId?: string) => {
-        const response = await api.get('/fees/reports/summary', { params: { academicYearId } });
+    getFeeStats: async (): Promise<unknown> => {
+        const response = await api.get('/fees/reports/stats');
         return response.data;
     }
 };

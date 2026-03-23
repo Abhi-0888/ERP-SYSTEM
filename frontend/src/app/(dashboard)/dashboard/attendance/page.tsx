@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,19 +17,8 @@ import {
 import { AcademicService } from "@/lib/services/academic.service";
 import { AttendanceService } from "@/lib/services/attendance.service";
 import { StudentService } from "@/lib/services/student.service";
-
-interface Course {
-    _id: string;
-    name: string;
-    code: string;
-}
-
-interface Student {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    registrationNumber: string;
-}
+import { toast } from "sonner";
+import { Course, Student } from "@/lib/types";
 
 // Faculty view - Mark attendance
 function FacultyAttendance() {
@@ -41,46 +30,45 @@ function FacultyAttendance() {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        const fetchCourses = async () => {
-            try {
-                const res = await AcademicService.getCourses({ limit: 100 });
-                setCourses(res.data || []);
-            } catch (error) {
-                console.error("Failed to fetch courses", error);
-            }
-        };
-        fetchCourses();
+    const fetchCourses = useCallback(async () => {
+        try {
+            const res = await AcademicService.getCourses({ limit: 100 });
+            setCourses(res.data || []);
+        } catch (error) {
+            console.error("Failed to fetch courses", error);
+        }
     }, []);
 
-    const fetchStudents = async (courseId: string) => {
+    useEffect(() => {
+        fetchCourses();
+    }, [fetchCourses]);
+
+    const fetchStudents = useCallback(async (courseId: string) => {
         if (!courseId) return;
         setLoading(true);
         try {
-            // For now, we fetch all students as we don't have a direct "students by course" API yet
-            // In a real scenario, this would filter by course enrollment
-            const res = await StudentService.getAll({ limit: 100 });
-            setStudents(res.data || []);
+            const data = await StudentService.getByCourse(courseId);
+            setStudents(data || []);
 
             // Initialize default attendance as present
-            const initialAttendance: Record<string, 'PRESENT'> = {};
-            (res.data || []).forEach((s: Student) => {
+            const initialAttendance: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE'> = {};
+            (data || []).forEach((s: Student) => {
                 initialAttendance[s._id] = 'PRESENT';
             });
             setAttendance(initialAttendance);
         } catch (error) {
             console.error("Failed to fetch students", error);
-            alert("Failed to load students");
+            toast.error("Failed to load enrolled students");
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         if (selectedCourse) {
             fetchStudents(selectedCourse);
         }
-    }, [selectedCourse]);
+    }, [selectedCourse, fetchStudents]);
 
     const toggleStatus = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE') => {
         setAttendance((prev) => ({ ...prev, [studentId]: status }));
@@ -227,7 +215,7 @@ function FacultyAttendance() {
                                 ) : (
                                     students.map((student) => (
                                         <TableRow key={student._id}>
-                                            <TableCell className="font-mono text-xs">{student.registrationNumber}</TableCell>
+                                            <TableCell className="font-mono text-xs">{student.enrollmentNo}</TableCell>
                                             <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
                                             <TableCell className="text-center">
                                                 <Button
@@ -279,9 +267,9 @@ function StudentAttendance() {
 
     useEffect(() => {
         const fetchAttendance = async () => {
-            if (!user?.id) return;
+            if (!user?._id) return;
             try {
-                const res = await AttendanceService.getStudentAttendance(user.id);
+                const res = await AttendanceService.getStudentAttendance(user._id);
                 setSummary(res.data);
             } catch (error) {
                 console.error("Failed to fetch attendance summary", error);
@@ -290,7 +278,7 @@ function StudentAttendance() {
             }
         };
         fetchAttendance();
-    }, [user?.id]);
+    }, [user?._id]);
 
     if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 

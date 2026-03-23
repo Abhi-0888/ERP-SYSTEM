@@ -14,6 +14,9 @@ export class Course {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
     departmentId: MongooseSchema.Types.ObjectId;
 
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Program', required: true })
+    programId: MongooseSchema.Types.ObjectId;
+
     @Prop({ required: true })
     credits: number;
 

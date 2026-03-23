@@ -1,19 +1,5 @@
 import api from '../api';
-
-export interface Exam {
-    _id?: string;
-    id?: string;
-    name: string;
-    courseId: any;
-    academicYearId: any;
-    type: string;
-    date: string;
-    startTime: string;
-    durationMinutes: number;
-    room: string;
-    maxMarks: number;
-    status: string;
-}
+import { Exam, ApiResponse } from '../types';
 
 export interface MarkSheet {
     _id?: string;
@@ -26,7 +12,7 @@ export interface MarkSheet {
 }
 
 export const ExamService = {
-    getExams: async (params?: any): Promise<{ exams: Exam[], total: number }> => {
+    getExams: async (params?: Record<string, string | number | boolean>): Promise<{ exams: Exam[], total: number }> => {
         const response = await api.get('/exams', { params });
         return response.data;
     },
@@ -36,22 +22,26 @@ export const ExamService = {
         return response.data;
     },
 
-    createExam: async (data: any) => {
+    createExam: async (data: Partial<Exam>): Promise<Exam> => {
         const response = await api.post('/exams', data);
         return response.data;
     },
 
-    updateExam: async (id: string, data: any) => {
+    updateExam: async (id: string, data: Partial<Exam>): Promise<Exam> => {
         const response = await api.patch(`/exams/${id}`, data);
         return response.data;
     },
 
-    getMarksByStudent: async (studentId: string): Promise<MarkSheet[]> => {
+    deleteExam: async (id: string): Promise<void> => {
+        await api.delete(`/exams/${id}`);
+    },
+
+    getMarksByStudent: async (studentId: string): Promise<ApiResponse<MarkSheet[]>> => {
         const response = await api.get(`/exams/student/${studentId}/results`);
         return response.data;
     },
 
-    recordMarks: async (examId: string, data: any) => {
+    recordMarks: async (examId: string, data: Partial<MarkSheet>): Promise<MarkSheet> => {
         const response = await api.post(`/exams/${examId}/marks`, data);
         return response.data;
     }

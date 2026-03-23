@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { UserService, User } from "@/lib/services/user.service";
+import { UserService } from "@/lib/services/user.service";
 import { AcademicService } from "@/lib/services/academic.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,12 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import {
-    Users, Search, Plus, Download, MoreHorizontal, Pencil, Trash2, Eye, 
+    Users as UsersIcon, Search, Plus, Download, MoreHorizontal, Pencil, Trash2, Eye, 
     Upload, RefreshCw, Key, ShieldAlert, Ban, CheckCircle2, History
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ROLE_AUTHORITY } from "@/lib/constants";
-import { Role, Department } from "@/lib/types";
+import { Role, Department, User } from "@/lib/types";
 import { toast } from "sonner";
 
 export default function UsersPage() {
@@ -55,7 +55,7 @@ export default function UsersPage() {
         departmentId: ""
     });
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
             const data = await UserService.getAll();
@@ -66,28 +66,30 @@ export default function UsersPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchDepartments = async () => {
+    const fetchDepartments = useCallback(async () => {
         try {
-            const data = await AcademicService.getDepartments();
-            setDepartments(data);
+            const res = await AcademicService.getDepartments();
+            setDepartments(res.data || []);
         } catch (error) {
             console.error(error);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchUsers();
         fetchDepartments();
-    }, []);
+    }, [fetchUsers, fetchDepartments]);
 
-    // Filter roles that the current user is authorized to assign
-    const assignableRoles = Object.keys(ROLE_AUTHORITY).filter(r => {
-        if (!activeRole) return false;
-        if (activeRole === 'SUPER_ADMIN') return true;
-        return ROLE_AUTHORITY[r as Role] <= ROLE_AUTHORITY[activeRole];
-    }) as Role[];
+    const assignableRoles = (Object.keys(ROLE_AUTHORITY) as Role[]).filter(r => 
+        ROLE_AUTHORITY[r] < ROLE_AUTHORITY[activeRole as Role]
+    );
+
+    const roleStats = users.reduce((acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
 
     const handleCreate = async () => {
         try {
@@ -115,62 +117,61 @@ export default function UsersPage() {
     const handleEdit = async () => {
         if (!selectedUser) return;
         try {
-            await UserService.update(selectedUser._id || selectedUser.id, {
-                email: formData.email,
-                role: formData.role,
-                departmentId: formData.departmentId
-            });
-            toast.success("Identity updated");
+            // Remove password from update if empty
+            const { password, ...updateData } = formData;
+            const finalData = password ? formData : updateData;
+            
+            await UserService.update((selectedUser as any)._id || (selectedUser as any).id, finalData);
+            toast.success("User updated successfully");
             setIsEditOpen(false);
             setSelectedUser(null);
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Update failed");
+            toast.error(error.response?.data?.message || "Failed to update user");
         }
     };
 
     const handleDelete = async () => {
         if (!selectedUser) return;
         try {
-            await UserService.delete(selectedUser._id || selectedUser.id);
-            toast.warning("User access revoked");
+            await UserService.delete((selectedUser as any)._id || (selectedUser as any).id);
+            toast.success("User deleted successfully");
             setIsDeleteOpen(false);
             setSelectedUser(null);
             fetchUsers();
-        } catch (error) {
-            toast.error("Deactivation failed");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to delete user");
         }
     };
 
     const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            toast.error("Please select a CSV/Excel file");
+            return;
+        }
 
         setImportLoading(true);
         try {
-            const result = await UserService.bulkImport(file);
-            toast.success(`Onboarded ${result.success} users successfully. ${result.failed} failed.`);
-            if (result.errors.length > 0) {
-                console.warn("Import errors:", result.errors);
-            }
+            await UserService.bulkImport(file);
+            await fetchUsers();
             setIsBulkImportOpen(false);
-            fetchUsers();
+            toast.success("Users imported successfully");
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Bulk onboarding failed");
+            toast.error(error.response?.data?.message || "Bulk import failed");
         } finally {
             setImportLoading(false);
-            if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
 
     const handleStatusToggle = async (user: User) => {
         try {
             const newStatus = user.isActive ? 'suspended' : 'active';
-            await UserService.updateStatus(user._id || user.id, newStatus);
-            toast.info(`User ${newStatus === 'active' ? 'activated' : 'suspended'}`);
+            await UserService.updateStatus((user as any)._id || (user as any).id, newStatus);
+            toast.success(`User ${newStatus === 'active' ? 'activated' : 'suspended'} successfully`);
             fetchUsers();
-        } catch (error) {
-            toast.error("Status update failed");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to update user status");
         }
     };
 
@@ -178,19 +179,19 @@ export default function UsersPage() {
         try {
             await UserService.resetPassword(userId);
             toast.success("Security reset initiated. User must change password at next login.");
-        } catch (error) {
-            toast.error("Reset failed");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Reset failed");
         }
     };
 
     const openEdit = (user: User) => {
         setSelectedUser(user);
-        setFormData({ 
-            ...formData, 
-            username: user.username, 
-            email: user.email, 
+        setFormData({
+            username: user.username,
+            email: user.email,
+            password: "", // Don't show password
             role: user.role as Role,
-            departmentId: user.departmentId || "" 
+            departmentId: user.departmentId || ""
         });
         setIsEditOpen(true);
     };
@@ -201,7 +202,19 @@ export default function UsersPage() {
     };
 
     const filteredUsers = users.filter((u) => {
-        const matchesSearch = (u.username + u.email + (u.departmentName || "")).toLowerCase().includes(searchQuery.toLowerCase());
+        const query = searchQuery.toLowerCase();
+
+        // Governance: Filter users based on current user's role authority and department scope
+        if (activeRole && activeRole !== 'SUPER_ADMIN') {
+            const isWithinAuthority = ROLE_AUTHORITY[u.role as Role] <= ROLE_AUTHORITY[activeRole];
+            const isWithinScope = activeRole !== 'HOD' || u.departmentId === currentUser?.departmentId;
+            if (!isWithinAuthority || !isWithinScope) return false;
+        }
+
+        const matchesSearch = u.username.toLowerCase().includes(query) ||
+            u.email.toLowerCase().includes(query) ||
+            u.role.toLowerCase().includes(query) ||
+            ((u as any).departmentName || "Institutional").toLowerCase().includes(query);
         const matchesRole = roleFilter === "all" || u.role === roleFilter;
         return matchesSearch && matchesRole;
     });
@@ -227,7 +240,7 @@ export default function UsersPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card className="border-0 shadow-sm">
                     <CardContent className="p-4 flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><Users className="h-5 w-5" /></div>
+                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><UsersIcon className="h-5 w-5" /></div>
                         <div>
                             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Entities</p>
                             <p className="text-xl font-bold">{users.length}</p>
@@ -257,7 +270,7 @@ export default function UsersPage() {
                         <div className="p-2 bg-orange-50 rounded-lg text-orange-600"><RefreshCw className="h-5 w-5" /></div>
                         <div>
                             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Onboarding</p>
-                            <p className="text-xl font-bold">{users.filter(u => !u.lastLogin).length}</p>
+                            <p className="text-xl font-bold">{users.filter(u => ! (u as any).lastLogin).length}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -285,6 +298,11 @@ export default function UsersPage() {
 
             {/* Table */}
             <Card className="border-0 shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <UsersIcon className="h-5 w-5" />User Directory
+                    </CardTitle>
+                </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
@@ -311,7 +329,7 @@ export default function UsersPage() {
                                     <TableCell colSpan={5} className="text-center py-20 text-slate-400">No matching user identities found.</TableCell>
                                 </TableRow>
                             ) : filteredUsers.map((user) => (
-                                <TableRow key={user._id || user.id} className="hover:bg-slate-50/50 transition-colors">
+                                <TableRow key={(user as any)._id || (user as any).id} className="hover:bg-slate-50/50 transition-colors">
                                     <TableCell>
                                         <div className="flex flex-col">
                                             <span className="font-bold text-slate-900">{user.username}</span>
@@ -324,7 +342,7 @@ export default function UsersPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                        <span className="text-sm font-medium text-slate-600">{user.departmentName || "Institutional"}</span>
+                                        <span className="text-sm font-medium text-slate-600">{(user as any).departmentName || "Institutional"}</span>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={user.isActive ? "default" : "secondary"} className={user.isActive ? "bg-emerald-500" : ""}>
@@ -337,16 +355,16 @@ export default function UsersPage() {
                                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl">
-                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/users/${user._id || user.id}`)} className="rounded-lg gap-2 cursor-pointer">
+                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/users/${user._id}`)} className="rounded-lg gap-2 cursor-pointer">
                                                     <Eye className="h-4 w-4 text-slate-400" /> View Details
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => openEdit(user)} className="rounded-lg gap-2 cursor-pointer">
                                                     <Pencil className="h-4 w-4 text-slate-400" /> Modify Identity
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleResetPassword(user._id || user.id)} className="rounded-lg gap-2 cursor-pointer">
+                                                <DropdownMenuItem onClick={() => handleResetPassword(user._id)} className="rounded-lg gap-2 cursor-pointer">
                                                     <Key className="h-4 w-4 text-blue-400" /> Reset Credentials
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/security/audit?userId=${user._id || user.id}`)} className="rounded-lg gap-2 cursor-pointer">
+                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/security/audit?userId=${user._id}`)} className="rounded-lg gap-2 cursor-pointer">
                                                     <History className="h-4 w-4 text-slate-400" /> Audit Trail
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
@@ -406,7 +424,7 @@ export default function UsersPage() {
                                     <SelectTrigger className="rounded-xl"><SelectValue placeholder="Institutional" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="">Institutional (Global)</SelectItem>
-                                        {departments.map(dept => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
+                                        {departments.map(dept => <SelectItem key={dept._id} value={dept._id}>{dept.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -454,7 +472,7 @@ export default function UsersPage() {
                                     <SelectTrigger className="rounded-xl"><SelectValue placeholder="Institutional" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="">Institutional (Global)</SelectItem>
-                                        {departments.map(dept => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
+                                        {departments.map(dept => <SelectItem key={dept._id} value={dept._id}>{dept.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>

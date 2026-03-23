@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,23 +19,8 @@ import {
 } from "@/components/ui/select";
 import { BookOpen, Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
 import { AcademicService } from "@/lib/services/academic.service";
-
-interface Program {
-    _id: string;
-    name: string;
-    code: string;
-}
-
-interface Course {
-    _id: string;
-    name: string;
-    code: string;
-    programId: Program | string;
-    semester: number;
-    credits: number;
-    description?: string;
-    minMarksForPass?: number;
-}
+import { Course, Program } from "@/lib/types";
+import { toast } from "sonner";
 
 export default function CoursesPage() {
     const [courses, setCourses] = useState<Course[]>([]);
@@ -62,7 +47,7 @@ export default function CoursesPage() {
         minMarksForPass: 40
     });
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const [coursesRes, programsRes] = await Promise.all([
@@ -73,14 +58,15 @@ export default function CoursesPage() {
             setPrograms(programsRes.data || []);
         } catch (error) {
             console.error("Failed to fetch data", error);
+            toast.error("Failed to load course data");
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const filtered = courses.filter((c) => {
         const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,20 +74,20 @@ export default function CoursesPage() {
         const matchesSem = semesterFilter === "all" || c.semester === parseInt(semesterFilter);
 
         // Handle program filter - checking populated object or string ID
-        let programId = "";
+        let currentProgramId = "";
         if (typeof c.programId === 'object' && c.programId !== null) {
-            programId = c.programId._id;
+            currentProgramId = (c.programId as Program)._id;
         } else {
-            programId = c.programId as string;
+            currentProgramId = c.programId as string;
         }
-        const matchesProgram = programFilter === "all" || programId === programFilter;
+        const matchesProgram = programFilter === "all" || currentProgramId === programFilter;
 
         return matchesSearch && matchesSem && matchesProgram;
     });
 
     const handleCreate = async () => {
         if (!formData.programId) {
-            alert("Please select a program");
+            toast.error("Please select a program");
             return;
         }
         setActionLoading(true);
@@ -110,8 +96,9 @@ export default function CoursesPage() {
             await fetchData();
             setIsCreateOpen(false);
             setFormData({ name: "", code: "", programId: "", semester: 1, credits: 3, minMarksForPass: 40 });
+            toast.success("Course created successfully");
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to create course");
+            toast.error(error.response?.data?.message || "Failed to create course");
         } finally {
             setActionLoading(false);
         }
@@ -124,8 +111,9 @@ export default function CoursesPage() {
             await AcademicService.updateCourse(selected._id, formData);
             await fetchData();
             setIsEditOpen(false);
+            toast.success("Course updated successfully");
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to update course");
+            toast.error(error.response?.data?.message || "Failed to update course");
         } finally {
             setActionLoading(false);
         }
@@ -138,8 +126,9 @@ export default function CoursesPage() {
             await AcademicService.deleteCourse(selected._id);
             await fetchData();
             setIsDeleteOpen(false);
+            toast.success("Course deleted successfully");
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to delete course");
+            toast.error(error.response?.data?.message || "Failed to delete course");
         } finally {
             setActionLoading(false);
         }
@@ -150,10 +139,10 @@ export default function CoursesPage() {
         setFormData({
             name: course.name,
             code: course.code,
-            programId: typeof course.programId === 'object' ? (course.programId as any)._id : course.programId,
+            programId: typeof course.programId === 'object' ? (course.programId as Program)._id : course.programId,
             semester: course.semester,
             credits: course.credits,
-            minMarksForPass: course.minMarksForPass || 40
+            minMarksForPass: (course as any).minMarksForPass || 40
         });
         setIsEditOpen(true);
     };

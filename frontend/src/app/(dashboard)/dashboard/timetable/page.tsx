@@ -1,44 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, BookOpen, Loader2 } from "lucide-react";
 import { TimetableService } from "@/lib/services/timetable.service";
 import { toast } from "sonner";
+import { Timetable } from "@/lib/types";
 
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function TimetablePage() {
-    const { user } = useAuth();
-    const [timetable, setTimetable] = useState<any>(null);
+    const { user, activeRole } = useAuth();
+    const [timetable, setTimetable] = useState<Timetable | null>(null);
     const [loading, setLoading] = useState(true);
     const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
-    useEffect(() => {
-        async function loadTimetable() {
-            try {
-                setLoading(true);
-                // For now, fetch all timetables and take the first one
-                // In real scenario, filter by student's section/program
-                const res = await TimetableService.getAllTimetables();
-                if (res.data && res.data.length > 0) {
-                    setTimetable(res.data[0]);
+    const loadTimetable = useCallback(async () => {
+        if (!user?._id) return;
+        try {
+            setLoading(true);
+            // Fetch student-specific timetable
+            const res = await TimetableService.getTimetableForStudent(user._id);
+            setTimetable(res);
+        } catch (error: any) {
+            console.error("Failed to load timetable:", error);
+            // If student view fails, try fetching general one if admin/faculty
+            if (activeRole !== 'STUDENT') {
+                try {
+                    const res = await TimetableService.getAllTimetables();
+                    if (res.data && res.data.length > 0) {
+                        setTimetable(res.data[0]);
+                    }
+                } catch (e) {
+                    toast.error("Failed to load any academic schedule");
                 }
-            } catch (error) {
-                console.error("Failed to load timetable:", error);
-                toast.error("Failed to load timetable");
-            } finally {
-                setLoading(false);
+            } else {
+                toast.error(error.response?.data?.message || "No timetable found for your profile");
             }
+        } finally {
+            setLoading(false);
         }
+    }, [user?._id, activeRole]);
+
+    useEffect(() => {
         loadTimetable();
-    }, []);
+    }, [loadTimetable]);
 
     const getSlotsForDay = (day: string) => {
         if (!timetable || !timetable.slots) return [];
-        return timetable.slots.filter((s: any) => s.day === day).sort((a: any, b: any) => a.startTime.localeCompare(b.startTime));
+        return timetable.slots.filter((s) => s.day === day).sort((a, b) => a.startTime.localeCompare(b.startTime));
     };
 
     if (loading) {
@@ -49,7 +61,7 @@ export default function TimetablePage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold">Timetable</h1>
-                <p className="text-slate-500">Your weekly class schedule - {timetable?.name || "Academic Schedule"}</p>
+                <p className="text-slate-500">Your weekly class schedule</p>
             </div>
 
             {/* Today's Classes */}
@@ -60,10 +72,10 @@ export default function TimetablePage() {
                         <h2 className="text-lg font-semibold">Today - {today}</h2>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-2">
-                        {getSlotsForDay(today).length > 0 ? getSlotsForDay(today).map((slot: any, i: number) => (
+                        {getSlotsForDay(today).length > 0 ? getSlotsForDay(today).map((slot, i) => (
                             <div key={i} className="flex-shrink-0 bg-white/20 backdrop-blur rounded-lg p-3 min-w-[200px]">
                                 <p className="text-sm font-medium">{slot.startTime} - {slot.endTime}</p>
-                                <p className="font-semibold mt-1">{slot.subject || "Class"}</p>
+                                <p className="font-semibold mt-1">{typeof slot.courseId === 'object' ? slot.courseId.name : "Class"}</p>
                                 <p className="text-sm text-white/80">{slot.room}</p>
                             </div>
                         )) : (

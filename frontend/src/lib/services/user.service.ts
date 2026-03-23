@@ -1,49 +1,39 @@
 import api from '../api';
-
-export interface User {
-    id: string;
-    _id?: string;
-    username: string;
-    email: string;
-    role: string;
-    isActive: boolean;
-    lastLogin?: string;
-    universityId?: string;
-    // Add other profile fields if your backend returns them spread or within a 'profile' key
-}
+import { User, ApiResponse } from '../types';
 
 export const UserService = {
-    getAll: async (params?: any) => {
+    getAll: async (params?: Record<string, string | number | boolean>): Promise<User[]> => {
         const response = await api.get('/users', { params });
+        // Assuming /users returns User[] directly based on usage in users/page.tsx
         return response.data;
     },
 
-    getByRole: async (role: string, params?: any) => {
+    getByRole: async (role: string, params?: Record<string, string | number | boolean>): Promise<User[]> => {
         const response = await api.get(`/users/role/${role}`, { params });
         return response.data;
     },
 
-    getById: async (id: string) => {
+    getById: async (id: string): Promise<User> => {
         const response = await api.get(`/users/${id}`);
         return response.data;
     },
 
-    create: async (data: any) => {
+    create: async (data: Partial<User> & { password?: string }): Promise<User> => {
         const response = await api.post('/users', data);
         return response.data;
     },
 
-    update: async (id: string, data: any) => {
+    update: async (id: string, data: Partial<User>): Promise<User> => {
         const response = await api.patch(`/users/${id}`, data);
         return response.data;
     },
 
-    delete: async (id: string) => {
+    delete: async (id: string): Promise<{ message: string }> => {
         const response = await api.delete(`/users/${id}`);
         return response.data;
     },
 
-    bulkImport: async (file: File) => {
+    bulkImport: async (file: File): Promise<ApiResponse<unknown>> => {
         const formData = new FormData();
         formData.append('file', file);
         const response = await api.post('/users/bulk-import', formData, {
@@ -54,12 +44,12 @@ export const UserService = {
         return response.data;
     },
 
-    updateStatus: async (id: string, status: string) => {
+    updateStatus: async (id: string, status: string): Promise<User> => {
         const response = await api.patch(`/users/${id}/status`, { status });
         return response.data;
     },
 
-    resetPassword: async (id: string) => {
+    resetPassword: async (id: string): Promise<{ message: string }> => {
         const response = await api.patch(`/users/${id}/reset-password`);
         return response.data;
     }

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { ROLE_WORKSPACE } from "@/lib/navigation";
 
 export default function Home() {
   const router = useRouter();
@@ -12,7 +13,6 @@ export default function Home() {
     if (!isLoading) {
       if (isAuthenticated && activeRole) {
         // Use the workspace mapping to redirect correctly
-        const { ROLE_WORKSPACE } = require("@/lib/navigation");
         const target = ROLE_WORKSPACE[activeRole] || "/dashboard";
         router.push(target);
       } else {
