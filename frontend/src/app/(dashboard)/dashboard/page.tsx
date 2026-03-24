@@ -353,13 +353,14 @@ function StudentDashboard() {
         const fetchStudentStats = async () => {
             try {
                 // Real data aggregation for student
-                const [attendanceRes, resultsRes, libraryRes] = await Promise.all([
+                const [attendanceRes, resultsResRow, libraryRes] = await Promise.all([
                     api.get(`/attendance/student/${user?.id || user?._id}/summary`),
-                    ExamService.getMarksByStudent(user?.id || user?._id),
+                    ExamService.getMarksByStudent((user?.id || user?._id) as string),
                     api.get(`/library/student/${user?.id || user?._id}/summary`)
                 ]);
 
                 // Calculate GPA from results
+                const resultsRes = (resultsResRow as any).data || resultsResRow || [];
                 const grades: Record<string, number> = { 'A+': 10, 'A': 9, 'B+': 8, 'B': 7, 'C': 6, 'P': 5, 'F': 0 };
                 const totalPoints = resultsRes.reduce((acc: number, r: any) => acc + (grades[r.grade] || 0), 0);
                 const avgGpa = resultsRes.length > 0 ? (totalPoints / resultsRes.length).toFixed(2) : "0.0";

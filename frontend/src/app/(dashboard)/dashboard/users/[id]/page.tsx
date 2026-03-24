@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { UserService, User } from "@/lib/services/user.service";
+import { UserService } from "@/lib/services/user.service";
+import { User } from "@/lib/types";
 import { AcademicService } from "@/lib/services/academic.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ export default function UserProfilePage() {
             try {
                 const [userRes, courseRes] = await Promise.all([
                     UserService.getById(id as string),
-                    AcademicService.getCourses({ facultyId: id }) // Assuming facultyId filter works
+                    AcademicService.getCourses({ facultyId: id as string }) // Assuming facultyId filter works
                 ]);
                 setUser(userRes);
                 setCourses(courseRes.data || []);

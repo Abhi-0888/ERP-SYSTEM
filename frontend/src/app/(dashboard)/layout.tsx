@@ -28,7 +28,7 @@ export default function DashboardLayout({
             }
 
             // Setup Guard: Redirect to onboarding if not active
-            if (user.universityStatus === 'setup' && activeRole === 'UNIVERSITY_ADMIN') {
+            if ((user as any).universityStatus === 'setup' && activeRole === 'UNIVERSITY_ADMIN') {
                 router.push("/onboarding");
                 return;
             }
@@ -40,12 +40,13 @@ export default function DashboardLayout({
             }
 
             // Workspace 4: Self-Service Portal (STUDENT, PARENT)
-            if (activeRole === "STUDENT" || activeRole === "PARENT") {
+            if (activeRole === "STUDENT" || activeRole === ("PARENT" as any)) {
                 router.push("/portal");
                 return;
             }
 
             // Workspace 2 & 3: University Command & Ops stay here
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsAuthorized(true);
         }
     }, [user, activeRole, isLoading, router, pathname]);

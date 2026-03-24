@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { StudentService, Student } from "@/lib/services/student.service";
+import { StudentService } from "@/lib/services/student.service";
+import { Student } from "@/lib/types";
 import { AttendanceService } from "@/lib/services/attendance.service";
 import { FeeService } from "@/lib/services/fee.service";
 import { ExamService } from "@/lib/services/exam.service";
@@ -48,7 +49,7 @@ export default function StudentProfilePage() {
                 const [attRes, feeRes, examRes, libRes] = await Promise.allSettled([
                     AttendanceService.getReport(id as string),
                     FeeService.getStudentFeeStatus(id as string),
-                    ExamService.getStudentResults(id as string),
+                    ExamService.getMarksByStudent(id as string),
                     LibraryService.getIssuedBooks(id as string)
                 ]);
 

@@ -26,6 +26,22 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
     const [onboardingStatus, setOnboardingStatus] = useState<any>(null);
 
     useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await api.get("/onboarding/status");
+                setOnboardingStatus(res.data);
+
+                // Auto-redirect to current stage if on root /onboarding
+                if (pathname === "/onboarding") {
+                    const stage = res.data.currentStage || 1;
+                    const stagePath = STAGES.find(s => s.id === stage)?.path || "/onboarding/profile";
+                    router.push(stagePath);
+                }
+            } catch (err) {
+                console.error("Failed to fetch onboarding status", err);
+            }
+        };
+
         if (!isLoading) {
             if (!user) {
                 router.push("/auth/login");
@@ -33,23 +49,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
             }
             fetchStatus();
         }
-    }, [user, isLoading]);
-
-    const fetchStatus = async () => {
-        try {
-            const res = await api.get("/onboarding/status");
-            setOnboardingStatus(res.data);
-
-            // Auto-redirect to current stage if on root /onboarding
-            if (pathname === "/onboarding") {
-                const stage = res.data.currentStage || 1;
-                const stagePath = STAGES.find(s => s.id === stage)?.path || "/onboarding/profile";
-                router.push(stagePath);
-            }
-        } catch (err) {
-            console.error("Failed to fetch onboarding status", err);
-        }
-    };
+    }, [user, isLoading, pathname, router]);
 
     if (isLoading || !onboardingStatus) {
         return (

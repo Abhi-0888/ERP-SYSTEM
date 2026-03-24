@@ -67,6 +67,21 @@ export class FeeController {
         }
     }
 
+    // ============= REPORTS =============
+
+    @Get('reports/summary')
+    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
+    async generateReport(@Query('academicYearId') academicYearId?: string) {
+        try {
+            return await this.feeService.generateFeeReport(academicYearId);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to generate report',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
     @Get(':id')
     @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
     async getFee(@Param('id') id: string, @Request() req) {
@@ -147,18 +162,5 @@ export class FeeController {
         }
     }
 
-    // ============= REPORTS =============
 
-    @Get('reports/summary')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
-    async generateReport(@Query('academicYearId') academicYearId?: string) {
-        try {
-            return await this.feeService.generateFeeReport(academicYearId);
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'Failed to generate report',
-                HttpStatus.INTERNAL_SERVER_ERROR,
-            );
-        }
-    }
 }

@@ -50,11 +50,11 @@ function AdminFeesView() {
             const [structsRes, yearsRes, reportRes] = await Promise.all([
                 FeeService.getFeeStructures({ limit: 100 }),
                 AcademicService.getAcademicYears(),
-                FeeService.getFeeReport()
+                FeeService.getFeeStats()
             ]);
-            setStructures(structsRes.data.data || []);
-            setAcademicYears(yearsRes.data || []);
-            setReport(reportRes.data);
+            setStructures((structsRes as any).data?.data || (structsRes as any).data || structsRes || []);
+            setAcademicYears((yearsRes as any).data || yearsRes || []);
+            setReport((reportRes as any).data || reportRes);
         } catch (error) {
             console.error("Failed to fetch fee data", error);
         } finally {
@@ -78,7 +78,7 @@ function AdminFeesView() {
             setIsCreateOpen(false);
             setFormData({
                 name: "",
-                type: "TUITION",
+                type: "TUITION" as any,
                 amount: 0,
                 academicYearId: "",
                 dueDate: new Date().toISOString().split('T')[0],

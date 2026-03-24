@@ -72,7 +72,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     </h3>
                                 )}
                                 <ul className="space-y-1">
-                                    {group.items.map((item) => {
+                                    {group.items.map((item: any) => {
                                         const Icon = iconMap[item.icon] || LayoutDashboard;
                                         const isActive = pathname === item.href;
 

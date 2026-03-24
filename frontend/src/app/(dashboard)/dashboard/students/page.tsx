@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { StudentService, Student } from "@/lib/services/student.service";
+import { StudentService } from "@/lib/services/student.service";
+import { Student } from "@/lib/types";
 import { AcademicService } from "@/lib/services/academic.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -118,7 +119,7 @@ export default function StudentsPage() {
 
     const filteredStudents = students.filter(
         (s) => (s.firstName + " " + s.lastName).toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase())
+            s.registrationNumber?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -287,8 +288,8 @@ export default function StudentsPage() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredStudents.map((student) => (
-                                    <TableRow key={student.id}>
+                                filteredStudents.map((student: any) => (
+                                    <TableRow key={student.id || student._id}>
                                         <TableCell>
                                             <div>
                                                 <p className="font-medium">{student.firstName} {student.lastName}</p>
@@ -311,13 +312,13 @@ export default function StudentsPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id}`)} className="cursor-pointer">
+                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id || student._id}`)} className="cursor-pointer">
                                                         <Eye className="h-4 w-4 mr-2" />View Profile
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         className="text-red-600"
-                                                        onClick={() => handleDelete(student.id)}
+                                                        onClick={() => handleDelete((student.id || student._id) as string)}
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>

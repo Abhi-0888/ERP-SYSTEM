@@ -18,31 +18,31 @@ export default function TimetablePage() {
     const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
     const loadTimetable = useCallback(async () => {
-        if (!user?._id) return;
+        if (!(user as any)?.id) return;
         try {
             setLoading(true);
-            // Fetch student-specific timetable
-            const res = await TimetableService.getTimetableForStudent(user._id);
-            setTimetable(res);
+            if (activeRole === 'STUDENT') {
+                // Fetch student-specific timetable
+                const res = await TimetableService.getTimetableForStudent((user as any).id);
+                setTimetable(res);
+            } else {
+                // Fetch general timetable if admin/faculty
+                const res = await TimetableService.getAllTimetables();
+                if (res.data && res.data.length > 0) {
+                    setTimetable(res.data[0]);
+                }
+            }
         } catch (error: any) {
             console.error("Failed to load timetable:", error);
-            // If student view fails, try fetching general one if admin/faculty
             if (activeRole !== 'STUDENT') {
-                try {
-                    const res = await TimetableService.getAllTimetables();
-                    if (res.data && res.data.length > 0) {
-                        setTimetable(res.data[0]);
-                    }
-                } catch (e) {
-                    toast.error("Failed to load any academic schedule");
-                }
+                toast.error("Failed to load any academic schedule");
             } else {
                 toast.error(error.response?.data?.message || "No timetable found for your profile");
             }
         } finally {
             setLoading(false);
         }
-    }, [user?._id, activeRole]);
+    }, [(user as any)?.id, activeRole]);
 
     useEffect(() => {
         loadTimetable();

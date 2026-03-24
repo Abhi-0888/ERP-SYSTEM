@@ -91,11 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const sortedRoles = sortRoles(roles);
 
             const frontendUser: User = {
+                _id: data.user.id || data.user._id,
                 id: data.user.id,
+                username: data.user.username || data.user.name,
                 name: data.user.name || data.user.username,
                 email: data.user.email || (data.user.username + "@example.com"),
+                role: sortedRoles[0],
                 universityId: data.user.universityId,
                 roles: sortedRoles,
+                isActive: true,
                 universityStatus: data.user.universityStatus,
                 onboardingStage: data.user.onboardingStage,
             };

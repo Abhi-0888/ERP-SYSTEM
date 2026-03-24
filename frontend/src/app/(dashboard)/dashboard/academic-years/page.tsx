@@ -24,7 +24,7 @@ interface AcademicYear {
     startDate: string;
     endDate: string;
     isActive: boolean;
-    status: string;
+    status?: string | any;
 }
 
 export default function AcademicYearsPage() {

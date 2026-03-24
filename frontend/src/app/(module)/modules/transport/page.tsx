@@ -26,11 +26,11 @@ export default function TransportManagerDashboard() {
             try {
                 setLoading(true);
                 const [vehRes, routeRes] = await Promise.all([
-                    TransportService.getAllVehicles(),
-                    TransportService.getAllRoutes()
+                    TransportService.getVehicles(),
+                    TransportService.getRoutes()
                 ]);
-                setVehicles(vehRes.data || vehRes || []);
-                setRoutes(routeRes.data || routeRes || []);
+                setVehicles((vehRes as any).data || vehRes || []);
+                setRoutes((routeRes as any).data || routeRes || []);
             } catch (error) {
                 console.error("Failed to load transport data:", error);
                 toast.error("Failed to load fleet data");

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     GraduationCap, BookOpen, CreditCard, ClipboardList,
-    TrendingUp, Clock, Sparkles
+    TrendingUp, Clock, Sparkles, Briefcase
 } from "lucide-react";
 import { ExamService } from "@/lib/services/exam.service";
 import { AttendanceService } from "@/lib/services/attendance.service";
@@ -69,13 +69,13 @@ export default function StudentPortalDashboard() {
     const [loading, setLoading] = useState(true);
 
     const fetchDashboardData = useCallback(async () => {
-        if (!user?._id) return;
+        if (!(user as any)?.id) return;
         setLoading(true);
         try {
             const [examsRes, attendanceRes, timetableRes] = await Promise.all([
-                ExamService.getMarksByStudent(user._id),
-                AttendanceService.getStudentAttendance(user._id),
-                TimetableService.getTimetableForStudent(user._id)
+                ExamService.getMarksByStudent((user as any).id),
+                AttendanceService.getStudentAttendance((user as any).id),
+                TimetableService.getTimetableForStudent((user as any).id)
             ]);
 
             // Process schedule for UI
@@ -98,7 +98,7 @@ export default function StudentPortalDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [user?._id]);
+    }, [(user as any)?.id]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -117,7 +117,7 @@ export default function StudentPortalDashboard() {
             <div className="relative overflow-hidden bg-indigo-600 rounded-[2rem] p-8 text-white shadow-xl shadow-indigo-100">
                 <Sparkles className="absolute -right-8 -top-8 h-40 w-40 text-white/10 rotate-12" />
                 <div className="relative z-10">
-                    <h1 className="text-3xl font-black font-outfit tracking-tight">Active Learning, {user?.name?.split(' ')[0]}</h1>
+                    <h1 className="text-3xl font-black font-outfit tracking-tight">Active Learning, {(user as any)?.name?.split(' ')[0]}</h1>
                     <p className="text-indigo-100 mt-2 font-medium opacity-90 max-w-lg">
                         You have 3 classes today. Semester 4 is progressing well with an 8.6 CGPA.
                     </p>
@@ -154,7 +154,7 @@ export default function StudentPortalDashboard() {
                                             <BookOpen className="h-7 w-7 text-indigo-600 group-hover/item:text-white" />
                                         </div>
                                         <div>
-                                            <p className="font-extrabold text-slate-900 text-lg">{typeof cls.courseId === 'object' ? cls.courseId.name : (cls.subject || "Major Elective")}</p>
+                                            <p className="font-extrabold text-slate-900 text-lg">{typeof cls.courseId === 'object' ? (cls.courseId as any).name : ((cls as any).subject || "Major Elective")}</p>
                                             <p className="text-sm text-slate-500 font-bold">{cls.startTime} - {cls.endTime}</p>
                                         </div>
                                     </div>

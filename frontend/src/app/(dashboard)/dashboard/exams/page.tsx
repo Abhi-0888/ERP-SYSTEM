@@ -128,16 +128,16 @@ function FacultyExamsView() {
                                 </TableRow>
                             ) : exams.map((exam) => (
                                 <TableRow key={exam._id || exam.id}>
-                                    <TableCell className="font-medium">{exam.name}</TableCell>
-                                    <TableCell>{exam.courseId?.name || 'N/A'}</TableCell>
-                                    <TableCell className="capitalize">{exam.type}</TableCell>
+                                    <TableCell className="font-medium">{(exam as any).name}</TableCell>
+                                    <TableCell>{(exam.courseId as any)?.name || 'N/A'}</TableCell>
+                                    <TableCell className="capitalize">{(exam as any).type}</TableCell>
                                     <TableCell>
                                         <div className="text-sm">
-                                            <p className="font-medium">{new Date(exam.date).toLocaleDateString()}</p>
-                                            <p className="text-slate-500 text-xs">{exam.startTime}</p>
+                                            <p className="font-medium">{new Date(exam.date as string).toLocaleDateString()}</p>
+                                            <p className="text-slate-500 text-xs">{(exam as any).startTime}</p>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{exam.room}</TableCell>
+                                    <TableCell>{(exam as any).room}</TableCell>
                                     <TableCell>
                                         <Badge variant={exam.status === 'scheduled' ? 'default' : exam.status === 'completed' ? 'secondary' : 'outline'}>
                                             {exam.status}
@@ -164,11 +164,11 @@ function StudentExamsView() {
 
     useEffect(() => {
         const fetchResults = async () => {
-            const studentId = user?._id;
+            const studentId = user?._id || user?.id;
             if (!studentId) return;
             try {
                 const data = await ExamService.getMarksByStudent(studentId);
-                setResults(data.data || []);
+                setResults((data as any).data || []);
             } catch (error) {
                 console.error("Failed to fetch results", error);
             } finally {
@@ -176,7 +176,7 @@ function StudentExamsView() {
             }
         };
         fetchResults();
-    }, [user?._id]);
+    }, [user?._id, user?.id]);
 
     return (
         <div className="space-y-6">
@@ -215,13 +215,13 @@ function StudentExamsView() {
                                     ) : results.map((result, i) => (
                                         <TableRow key={i}>
                                             <TableCell>
-                                                <div className="font-medium">{result.examId?.courseId?.name || 'Course'}</div>
-                                                <div className="text-xs text-slate-500">{result.examId?.name}</div>
+                                                <div className="font-medium">{(result.examId as any)?.courseId?.name || 'Course'}</div>
+                                                <div className="text-xs text-slate-500">{(result.examId as any)?.name}</div>
                                             </TableCell>
-                                            <TableCell className="capitalize">{result.examId?.type}</TableCell>
+                                            <TableCell className="capitalize">{(result.examId as any)?.type}</TableCell>
                                             <TableCell>
                                                 <span className="font-bold">{result.marksObtained}</span>
-                                                <span className="text-slate-400"> / {result.examId?.maxMarks}</span>
+                                                <span className="text-slate-400"> / {(result.examId as any)?.maxMarks}</span>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge className={result.grade.startsWith('A') ? 'bg-green-500' : 'bg-blue-500'}>

@@ -1,14 +1,21 @@
-export type Role = 'SUPER_ADMIN' | 'UNIVERSITY_ADMIN' | 'REGISTRAR' | 'ACCOUNTANT' | 'EXAM_CONTROLLER' | 'HOD' | 'FACULTY' | 'STUDENT';
+export type Role = 'SUPER_ADMIN' | 'UNIVERSITY_ADMIN' | 'REGISTRAR' | 'ACCOUNTANT' | 'EXAM_CONTROLLER' | 'HOD' | 'FACULTY' | 'STUDENT' | 'PRINCIPAL' | 'LIBRARIAN' | 'HOSTEL_WARDEN' | 'TRANSPORT_MANAGER' | 'PLACEMENT_OFFICER' | 'PLACEMENT_CELL' | 'PARENT' | 'ACADEMIC_COORDINATOR' | 'FINANCE';
 
 export interface User {
     _id: string;
+    id?: string;
     username: string;
+    name?: string;
     email: string;
     role: Role;
     roles: Role[];
     universityId?: string;
     departmentId?: string;
+    universityStatus?: string;
+    departmentName?: string;
+    universityName?: string;
     isActive: boolean;
+    lastLogin?: string | Date;
+    onboardingStage?: string;
 }
 
 export interface ApiResponse<T> {
@@ -21,23 +28,26 @@ export interface ApiResponse<T> {
     };
     message?: string;
 }
-
 export interface Department {
     _id: string;
+    id?: string;
     name: string;
     code: string;
     universityId: string;
-    hodId?: string | User;
+    hodId?: any;
     description?: string;
     isActive: boolean;
 }
 
 export interface Program {
     _id: string;
+    id?: string;
     name: string;
     code: string;
-    departmentId: string | Department;
+    type?: string;
+    departmentId: any;
     duration: number;
+    totalSemesters?: number;
     description?: string;
 }
 
@@ -45,47 +55,56 @@ export interface Course {
     _id: string;
     name: string;
     code: string;
-    departmentId: string | Department;
-    programId: string | Program;
+    departmentId: any;
+    programId: any;
     credits: number;
     semester: number;
-    facultyId?: string | User;
+    facultyId?: any;
 }
 
 export interface AcademicYear {
     _id: string;
+    id?: string;
     year: string;
-    startDate: string | Date;
-    endDate: string | Date;
+    startDate: string | Date | any;
+    endDate: string | Date | any;
     isActive: boolean;
+    status?: string;
 }
 
 export interface Student {
     _id: string;
-    userId: string | User;
+    id?: string;
+    userId: any;
     firstName: string;
     lastName: string;
+    email?: string;
     enrollmentNo: string;
-    programId: string | Program;
-    departmentId: string | Department;
-    academicYearId: string | AcademicYear;
+    registrationNumber?: string;
+    programId: any;
+    departmentId: any;
+    academicYearId: any;
     currentSemester: number;
-    enrolledCourses: (string | Course)[];
-    status: 'Active' | 'Suspended' | 'Graduated' | 'Withdrawn';
+    enrolledCourses: any[];
+    status: 'Active' | 'Suspended' | 'Graduated' | 'Withdrawn' | 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'WITHDRAWN';
 }
 
 export interface Exam {
     _id: string;
+    id?: string;
     name: string;
     courseId: string | Course;
     academicYearId: string | AcademicYear;
     type: 'INTERNAL' | 'EXTERNAL' | 'PRACTICAL';
     totalMarks: number;
+    maxMarks?: string | number;
     passingMarks: number;
+    date?: string | Date;
     examDate: string | Date;
     startTime: string | Date;
     endTime: string | Date;
-    status: 'Scheduled' | 'In-Progress' | 'Completed' | 'Cancelled';
+    room?: string;
+    status: 'Scheduled' | 'In-Progress' | 'Completed' | 'Cancelled' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled' | 'published';
 }
 
 export interface Timetable {
@@ -138,4 +157,16 @@ export interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;
     activeRole: Role | null;
+}
+
+export interface NavItem {
+    title: string;
+    href: string;
+    icon: string;
+    badge?: string | number;
+}
+
+export interface NavGroup {
+    title: string;
+    items: NavItem[];
 }

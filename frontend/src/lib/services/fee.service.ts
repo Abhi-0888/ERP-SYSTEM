@@ -1,5 +1,12 @@
 import api from '../api';
 
+export interface ApiResponse<T> {
+    data: T;
+    message?: string;
+    success?: boolean;
+}
+
+
 export enum FeeType {
     TUITION = 'TUITION',
     HOSTEL = 'HOSTEL',
@@ -99,7 +106,7 @@ export const FeeService = {
 
     // Reports
     getFeeStats: async (): Promise<unknown> => {
-        const response = await api.get('/fees/reports/stats');
+        const response = await api.get('/fees/reports/summary');
         return response.data;
     }
 };
