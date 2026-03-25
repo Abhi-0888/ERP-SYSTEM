@@ -28,7 +28,7 @@ export const ROLE_WORKSPACE: Record<Role, string> = {
     HOSTEL_WARDEN: "/dashboard",
     TRANSPORT_MANAGER: "/dashboard",
     PLACEMENT_OFFICER: "/dashboard",
-    PLACEMENT_CELL: "/dashboard",
+    PLACEMENT_CELL: "/modules/placement",
 };
 
 // Role-based navigation configuration
@@ -296,12 +296,66 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
                 { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
             ],
         },
+        {
+            title: "Academics",
+            items: [
+                { title: "Departments", href: "/dashboard/departments", icon: "Building" },
+                { title: "Programs", href: "/dashboard/programs", icon: "GraduationCap" },
+                { title: "Courses", href: "/dashboard/courses", icon: "BookOpen" },
+                { title: "Academic Years", href: "/dashboard/academic-years", icon: "Calendar" },
+                { title: "Enrollments", href: "/dashboard/enrollments", icon: "ClipboardList" },
+            ],
+        },
+        {
+            title: "People",
+            items: [
+                { title: "Students", href: "/dashboard/students", icon: "Users" },
+                { title: "Faculty", href: "/dashboard/faculty", icon: "UserCheck" },
+            ],
+        },
+        {
+            title: "Operations",
+            items: [
+                { title: "Attendance", href: "/dashboard/attendance", icon: "ClipboardList" },
+                { title: "Timetable", href: "/dashboard/timetable", icon: "Calendar" },
+                { title: "Exams", href: "/dashboard/exams", icon: "FileText" },
+            ],
+        },
+        {
+            title: "Reports",
+            items: [
+                { title: "Analytics", href: "/dashboard/reports", icon: "BarChart3" },
+            ],
+        },
     ],
     ACADEMIC_COORDINATOR: [
         {
             title: "Overview",
             items: [
                 { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+            ],
+        },
+        {
+            title: "Academics",
+            items: [
+                { title: "Programs", href: "/dashboard/programs", icon: "GraduationCap" },
+                { title: "Courses", href: "/dashboard/courses", icon: "BookOpen" },
+                { title: "Academic Years", href: "/dashboard/academic-years", icon: "Calendar" },
+                { title: "Enrollments", href: "/dashboard/enrollments", icon: "ClipboardList" },
+            ],
+        },
+        {
+            title: "People",
+            items: [
+                { title: "Students", href: "/dashboard/students", icon: "Users" },
+                { title: "Faculty", href: "/dashboard/faculty", icon: "UserCheck" },
+            ],
+        },
+        {
+            title: "Operations",
+            items: [
+                { title: "Attendance", href: "/dashboard/attendance", icon: "ClipboardList" },
+                { title: "Timetable", href: "/dashboard/timetable", icon: "Calendar" },
             ],
         },
     ],
@@ -312,6 +366,26 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
                 { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
             ],
         },
+        {
+            title: "Examinations",
+            items: [
+                { title: "Exams", href: "/dashboard/exams", icon: "FileText" },
+                { title: "Timetable", href: "/dashboard/timetable", icon: "Calendar" },
+            ],
+        },
+        {
+            title: "Reference",
+            items: [
+                { title: "Students", href: "/dashboard/students", icon: "Users" },
+                { title: "Courses", href: "/dashboard/courses", icon: "BookOpen" },
+            ],
+        },
+        {
+            title: "Reports",
+            items: [
+                { title: "Analytics", href: "/dashboard/reports", icon: "BarChart3" },
+            ],
+        },
     ],
     FINANCE: [
         {
@@ -320,12 +394,37 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
                 { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
             ],
         },
+        {
+            title: "Finance",
+            items: [
+                { title: "Fees Management", href: "/dashboard/fees", icon: "CreditCard" },
+            ],
+        },
+        {
+            title: "Reference",
+            items: [
+                { title: "Students", href: "/dashboard/students", icon: "Users" },
+            ],
+        },
+        {
+            title: "Reports",
+            items: [
+                { title: "Analytics", href: "/dashboard/reports", icon: "BarChart3" },
+            ],
+        },
     ],
     PLACEMENT_CELL: [
         {
             title: "Overview",
             items: [
-                { title: "Dashboard", href: "/dashboard", icon: "LayoutDashboard" },
+                { title: "Placement Dashboard", href: "/modules/placement", icon: "LayoutDashboard" },
+            ],
+        },
+        {
+            title: "Recruitment",
+            items: [
+                { title: "Company Database", href: "/modules/placement/companies", icon: "Building2" },
+                { title: "Drives", href: "/modules/placement/drives", icon: "Briefcase" },
             ],
         },
     ],

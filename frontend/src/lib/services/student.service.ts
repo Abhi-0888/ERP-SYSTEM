@@ -56,5 +56,11 @@ export const StudentService = {
     updateEnrollment: async (id: string, data: { courseIds: string[] }): Promise<Student> => {
         const response = await api.patch(`/students/${id}/enrollment`, data);
         return response.data;
+    },
+
+    // Unified enrollment: creates User account + StudentProfile + returns credentials
+    enrollStudent: async (data: any): Promise<{ student: Student; credentials: { username: string; password: string; message: string } }> => {
+        const response = await api.post('/students/enroll', data);
+        return response.data;
     }
 };

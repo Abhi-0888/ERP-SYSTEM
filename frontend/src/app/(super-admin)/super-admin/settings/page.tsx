@@ -148,7 +148,7 @@ export default function SystemSettingsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Role</label>
-                                    <Input value="SUPER_ADMIN" disabled className="rounded-xl" />
+                                    <Input value={profile?.role || "SUPER_ADMIN"} disabled className="rounded-xl" />
                                 </div>
                             </div>
                             <div className="flex justify-end">

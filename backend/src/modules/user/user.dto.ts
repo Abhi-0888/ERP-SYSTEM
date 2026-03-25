@@ -6,6 +6,10 @@ export class CreateUserDto {
     @MinLength(3, { message: 'Username must be at least 3 characters long' })
     username: string;
 
+    @IsOptional()
+    @IsString()
+    name?: string;
+
     @IsEmail({}, { message: 'Email must be a valid email address' })
     email: string;
 
@@ -42,6 +46,10 @@ export class UpdateUserDto {
     username?: string;
 
     @IsOptional()
+    @IsString()
+    name?: string;
+
+    @IsOptional()
     @IsEmail({}, { message: 'Email must be a valid email address' })
     email?: string;
 
@@ -69,6 +77,13 @@ export class UpdateUserDto {
     @IsOptional()
     @IsString()
     status?: string;
+
+    @IsOptional()
+    @IsString()
+    universityId?: string;
+
+    @IsOptional()
+    profileId?: any;
 }
 
 export class LoginDto {

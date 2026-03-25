@@ -353,7 +353,7 @@ function StudentFeesView() {
 export default function FeesPage() {
     const { activeRole } = useAuth();
 
-    if (activeRole === "ACCOUNTANT" || activeRole === "UNIVERSITY_ADMIN" || activeRole === "SUPER_ADMIN") {
+    if (activeRole === "ACCOUNTANT" || activeRole === "UNIVERSITY_ADMIN" || activeRole === "SUPER_ADMIN" || activeRole === "FINANCE" || activeRole === "REGISTRAR") {
         return <AdminFeesView />;
     }
 

@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 id: data.user.id,
                 username: data.user.username || data.user.name,
                 name: data.user.name || data.user.username,
-                email: data.user.email || (data.user.username + "@example.com"),
+                email: data.user.email || "",
                 role: sortedRoles[0],
                 universityId: data.user.universityId,
                 roles: sortedRoles,
@@ -112,12 +112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem("educore_user", JSON.stringify(frontendUser));
             localStorage.setItem("educore_role", defaultRole);
 
-            // Initial audit log for login
-            api.post('/audit/logs', {
-                action: 'LOGIN',
-                details: `User logged in with role ${defaultRole}`,
-                metadata: { role: defaultRole }
-            }).catch(err => console.error("Audit log failed:", err));
+            // Initial audit log for login (delayed so token interceptor picks it up)
+            setTimeout(() => {
+                api.post('/audit/logs', {
+                    action: 'LOGIN',
+                    details: `User logged in with role ${defaultRole}`,
+                    metadata: { role: defaultRole }
+                }).catch(() => {});
+            }, 500);
 
         } catch (error: any) {
             console.error("Login failed:", error);

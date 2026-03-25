@@ -4,13 +4,75 @@ import { Model } from 'mongoose';
 import { StudentProfile, StudentProfileDocument } from './student-profile.schema';
 import { CreateStudentDto, UpdateStudentDto, UpdateStudentEnrollmentDto } from './student.dto';
 import { Role } from '../../common/enums/role.enum';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class StudentService {
     constructor(
         @InjectModel(StudentProfile.name)
         private studentProfileModel: Model<StudentProfileDocument>,
+        private readonly userService: UserService,
     ) { }
+
+    /**
+     * Unified enrollment: creates User account + StudentProfile in one step.
+     * Returns both the profile and the plain-text credentials for the admin to share.
+     */
+    async enrollStudent(dto: CreateStudentDto & { departmentId?: string; batch?: string; currentSemester?: number }, currentUser: any) {
+        // 1. Check for duplicate enrollment number
+        const existing = await this.studentProfileModel.findOne({ enrollmentNo: dto.registrationNumber });
+        if (existing) {
+            throw new BadRequestException('Enrollment number already exists');
+        }
+
+        // 2. Auto-generate credentials
+        const username = dto.registrationNumber.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const tempPassword = 'Edu@' + Math.random().toString(36).substring(2, 10) + Math.floor(Math.random() * 10);
+
+        // 3. Create User account with STUDENT role
+        const user = await this.userService.create({
+            username,
+            email: dto.email,
+            password: tempPassword,
+            role: Role.STUDENT,
+            departmentId: dto.departmentId,
+            phoneNumber: dto.phoneNumber,
+        }, currentUser);
+
+        // 4. Create StudentProfile linked to the user
+        const studentProfile = new this.studentProfileModel({
+            userId: (user as any)._id,
+            enrollmentNo: dto.registrationNumber,
+            programId: dto.programId,
+            departmentId: dto.departmentId,
+            academicYearId: dto.academicYearId,
+            currentSemester: dto.currentSemester || 1,
+            batch: dto.batch || new Date().getFullYear().toString(),
+            dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth as any) : undefined,
+            gender: dto.gender,
+            address: dto.address,
+            guardianDetails: {
+                name: dto.fatherName || dto.motherName,
+                phone: dto.guardianPhoneNumber,
+            },
+            status: 'Active',
+            admissionDate: new Date(),
+        });
+
+        const savedProfile = await studentProfile.save();
+
+        // 5. Link profile back to user
+        await this.userService.update((user as any)._id.toString(), { profileId: savedProfile._id } as any, currentUser);
+
+        return {
+            student: savedProfile,
+            credentials: {
+                username,
+                password: tempPassword,
+                message: 'Please share these credentials securely. The student must change their password on first login.',
+            },
+        };
+    }
 
     async createStudent(dto: CreateStudentDto, _currentUser: any): Promise<StudentProfile> {
         try {

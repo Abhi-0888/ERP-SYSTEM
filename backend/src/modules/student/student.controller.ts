@@ -26,6 +26,19 @@ import { UniversityIsolationGuard } from '../../common/guards/university-isolati
 export class StudentController {
     constructor(private readonly studentService: StudentService) { }
 
+    @Post('enroll')
+    @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
+    async enrollStudent(@Body() dto: CreateStudentDto, @Request() req) {
+        try {
+            return await this.studentService.enrollStudent(dto as any, req.user);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to enroll student',
+                error.status || HttpStatus.BAD_REQUEST,
+            );
+        }
+    }
+
     @Post()
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
     async createStudent(@Body() dto: CreateStudentDto, @Request() req) {

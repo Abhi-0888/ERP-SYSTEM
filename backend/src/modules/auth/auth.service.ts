@@ -58,6 +58,9 @@ export class AuthService {
             user: {
                 id: user._id,
                 username: user.username,
+                name: user.name || user.username,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
                 role: user.role,
                 universityId: user.universityId,
                 universityStatus: university?.status || 'active',
@@ -85,6 +88,9 @@ export class AuthService {
             user: {
                 id: user._id,
                 username: user.username,
+                name: user.name || user.username,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
                 role: user.role,
                 universityId: user.universityId,
             },
