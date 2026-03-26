@@ -12,7 +12,7 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    Check, X, Clock, Save, TrendingUp, TrendingDown, Users, Calendar, Loader2, RefreshCw
+    Check, X, Clock, Save, TrendingUp, TrendingDown, Users, Calendar, Loader2, RefreshCw, AlertCircle, ClipboardList
 } from "lucide-react";
 import { AcademicService } from "@/lib/services/academic.service";
 import { AttendanceService } from "@/lib/services/attendance.service";
@@ -263,6 +263,7 @@ function FacultyAttendance() {
 function StudentAttendance() {
     const [summary, setSummary] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -270,9 +271,15 @@ function StudentAttendance() {
             if (!user?._id) return;
             try {
                 const res = await AttendanceService.getStudentAttendance(user._id);
-                setSummary(res.data);
-            } catch (error) {
+                setSummary(res.data || res);
+                setError(null);
+            } catch (error: any) {
                 console.error("Failed to fetch attendance summary", error);
+                if (error.response?.status === 404) {
+                    setError("Student profile not found. Please contact the registrar to complete your enrollment.");
+                } else {
+                    setError("Failed to load attendance data. Please try again later.");
+                }
             } finally {
                 setLoading(false);
             }
@@ -281,6 +288,24 @@ function StudentAttendance() {
     }, [user?._id]);
 
     if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
+                <AlertCircle className="h-12 w-12 text-slate-400" />
+                <h3 className="text-xl font-bold">Attendance Records Unavailable</h3>
+                <p className="text-slate-500 max-w-md">{error}</p>
+            </div>
+        );
+    }
+
+    if (!summary) return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
+            <ClipboardList className="h-12 w-12 text-slate-400" />
+            <h3 className="text-xl font-bold">No Records Found</h3>
+            <p className="text-slate-500">You haven't been marked for any classes yet.</p>
+        </div>
+    );
 
     return (
         <div className="space-y-6">
@@ -390,7 +415,7 @@ function StudentAttendance() {
 export default function AttendancePage() {
     const { activeRole } = useAuth();
 
-    if (activeRole === "SUPER_ADMIN" || activeRole === "FACULTY" || activeRole === "HOD" || activeRole === "UNIVERSITY_ADMIN") {
+    if (activeRole === "SUPER_ADMIN" || activeRole === "FACULTY" || activeRole === "HOD" || activeRole === "UNIVERSITY_ADMIN" || activeRole === "ACADEMIC_COORDINATOR") {
         return <FacultyAttendance />;
     }
 

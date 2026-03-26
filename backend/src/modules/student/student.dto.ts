@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsEnum, IsOptional, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsOptional, MinLength, MaxLength, Matches, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum StudentStatus {
@@ -36,9 +36,8 @@ export class CreateStudentDto {
     @IsEnum(Gender)
     gender: Gender;
 
-    @IsString()
-    @Type(() => Date)
-    dateOfBirth: Date;
+    @IsNotEmpty()
+    dateOfBirth: string;
 
     @IsString()
     @MinLength(5)
@@ -49,11 +48,19 @@ export class CreateStudentDto {
     programId: string;
 
     @IsString()
+    @IsOptional()
+    departmentId?: string;
+
+    @IsString()
     academicYearId: string;
 
     @IsEnum(StudentStatus)
     @IsOptional()
     status?: StudentStatus;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 
     @IsString()
     @IsOptional()

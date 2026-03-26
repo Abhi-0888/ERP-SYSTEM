@@ -162,5 +162,11 @@ export class FeeController {
         }
     }
 
+    @Get('student/:studentId/status')
+    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN, Role.STUDENT, Role.REGISTRAR)
+    async getStudentFeeStatus(@Param('studentId') studentId: string, @Request() req) {
+        return this.getStudentFees(studentId, req);
+    }
+
 
 }

@@ -12,8 +12,8 @@ export const SHELL_CONFIG: Record<ShellType, Role[]> = {
 // Map roles to their primary workspace base URL
 export const ROLE_WORKSPACE: Record<Role, string> = {
     SUPER_ADMIN: "/super-admin",
-    STUDENT: "/portal",
-    PARENT: "/portal",
+    STUDENT: "/portal/dashboard",
+    PARENT: "/portal/dashboard",
     // All others use dashboard
     UNIVERSITY_ADMIN: "/dashboard",
     PRINCIPAL: "/dashboard",
@@ -170,7 +170,7 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
         {
             title: "Overview",
             items: [
-                { title: "Dashboard", href: "/portal", icon: "LayoutDashboard" },
+                { title: "Dashboard", href: "/portal/dashboard", icon: "LayoutDashboard" },
             ],
         },
         {
@@ -197,7 +197,7 @@ export const roleNavigation: Record<Role, NavGroup[]> = {
         {
             title: "Overview",
             items: [
-                { title: "Dashboard", href: "/portal", icon: "LayoutDashboard" },
+                { title: "Dashboard", href: "/portal/dashboard", icon: "LayoutDashboard" },
             ],
         },
         {

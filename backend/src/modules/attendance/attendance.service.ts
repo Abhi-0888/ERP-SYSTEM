@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Attendance, AttendanceDocument } from './attendance.schema';
 import { MarkAttendanceDto, UpdateAttendanceDto, AttendanceFilterDto } from './attendance.dto';
 import { Role } from '../../common/enums/role.enum';
@@ -129,6 +129,11 @@ export class AttendanceService {
 
     async getStudentAttendance(currentUser: any, studentIdOrUserId: string, courseId?: string): Promise<any> {
         try {
+            // Validate ObjectId format to avoid CastError (500)
+            if (!Types.ObjectId.isValid(studentIdOrUserId)) {
+                throw new NotFoundException('Invalid ID format for student or user');
+            }
+
             // First, find if the provided ID is a student profile or a user ID
             let student = await this.studentProfileModel.findById(studentIdOrUserId);
             if (!student) {

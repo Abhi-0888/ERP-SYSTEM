@@ -89,18 +89,18 @@ export default function StudentProfilePage() {
                         <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
                             <UserIcon className="h-12 w-12 text-blue-600" />
                         </div>
-                        <h2 className="text-xl font-bold">{student.firstName} {student.lastName}</h2>
-                        <p className="text-sm text-slate-500 mb-2">{student.enrollmentNo || student.registrationNumber}</p>
+                        <h2 className="text-xl font-bold">{student.userId?.name || `${student.firstName} ${student.lastName}`}</h2>
+                        <p className="text-sm text-slate-500 mb-2">{student.enrollmentNo}</p>
                         <Badge>{student.status}</Badge>
 
                         <div className="mt-6 space-y-3 text-left">
                             <div className="flex items-center gap-3 text-sm text-slate-600">
                                 <Mail className="h-4 w-4 min-w-[16px]" />
-                                <span className="truncate">{student.email}</span>
+                                <span className="truncate">{student.userId?.email || student.email}</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-slate-600">
                                 <Phone className="h-4 w-4 min-w-[16px]" />
-                                <span>{student.phoneNumber || 'Not provided'}</span>
+                                <span>{student.userId?.phoneNumber || student.phoneNumber || 'Not provided'}</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-slate-600">
                                 <GraduationCap className="h-4 w-4 min-w-[16px]" />
@@ -108,7 +108,7 @@ export default function StudentProfilePage() {
                             </div>
                             <div className="flex items-center gap-3 text-sm text-slate-600">
                                 <MapPin className="h-4 w-4 min-w-[16px]" />
-                                <span>{student.personalInfo?.address || 'N/A'}</span>
+                                <span>{student.address || 'N/A'}</span>
                             </div>
                         </div>
                     </CardContent>
@@ -136,7 +136,7 @@ export default function StudentProfilePage() {
                                     <p className="text-sm text-slate-700 leading-relaxed">
                                         {student.firstName} is performing <strong>Excellently</strong> in Academic results with a consistent GPA.
                                         Attendance is currently at <strong>{(extraData.attendance?.overallPercentage || 0).toFixed(1)}%</strong>, which is above average.
-                                        However, there is a pending Fee of <strong>₹{(extraData.fees?.summary?.total - extraData.fees?.summary?.paid || 0).toLocaleString()}</strong>.
+                                        However, there is a pending Fee of <strong>₹{((extraData.fees?.summary?.total || 0) - (extraData.fees?.summary?.paid || 0)).toLocaleString()}</strong>.
                                         Recommendation: Encourage participation in extra-curricular activities to maintain a balanced profile.
                                     </p>
                                 </CardContent>
@@ -302,7 +302,7 @@ export default function StudentProfilePage() {
                                             </div>
                                             <div className="flex justify-between items-center py-2 text-lg">
                                                 <span className="font-semibold">Balance Due</span>
-                                                <span className="font-bold text-red-600">₹{(extraData.fees?.summary?.total - extraData.fees?.summary?.paid || 0).toLocaleString()}</span>
+                                                <span className="font-bold text-red-600">₹{((extraData.fees?.summary?.total || 0) - (extraData.fees?.summary?.paid || 0)).toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </CardContent>

@@ -35,6 +35,10 @@ export class CreateAcademicYearDto {
     @IsString()
     @IsOptional()
     description?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class UpdateAcademicYearDto {
@@ -79,7 +83,7 @@ export class CreateDepartmentDto {
 
     @IsString()
     @IsOptional()
-    headOfDepartment?: string;
+    hodId?: string;
 }
 
 export class UpdateDepartmentDto {
@@ -97,7 +101,7 @@ export class UpdateDepartmentDto {
 
     @IsString()
     @IsOptional()
-    headOfDepartment?: string;
+    hodId?: string;
 }
 
 export class CreateProgramDto {
@@ -137,6 +141,10 @@ export class CreateProgramDto {
     @IsString()
     @IsOptional()
     description?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class UpdateProgramDto {
@@ -159,6 +167,14 @@ export class UpdateProgramDto {
     @IsString()
     @IsOptional()
     description?: string;
+
+    @IsString()
+    @IsOptional()
+    departmentId?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class CreateCourseDto {
@@ -194,6 +210,14 @@ export class CreateCourseDto {
     @IsOptional()
     @Min(0)
     minMarksForPass?: number;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
+
+    @IsString()
+    @IsOptional()
+    facultyId?: string;
 }
 
 export class UpdateCourseDto {
@@ -220,4 +244,8 @@ export class UpdateCourseDto {
     @IsNumber()
     @IsOptional()
     minMarksForPass?: number;
+
+    @IsString()
+    @IsOptional()
+    facultyId?: string;
 }

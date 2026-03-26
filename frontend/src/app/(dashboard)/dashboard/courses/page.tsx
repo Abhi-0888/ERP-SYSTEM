@@ -17,9 +17,10 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
-import { BookOpen, Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { BookOpen, Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2, RefreshCw, UserCheck } from "lucide-react";
 import { AcademicService } from "@/lib/services/academic.service";
-import { Course, Program } from "@/lib/types";
+import { UserService } from "@/lib/services/user.service";
+import { Course, Program, User } from "@/lib/types";
 import { toast } from "sonner";
 
 export default function CoursesPage() {
@@ -34,8 +35,11 @@ export default function CoursesPage() {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isAssignOpen, setIsAssignOpen] = useState(false);
     const [selected, setSelected] = useState<Course | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [faculty, setFaculty] = useState<User[]>([]);
+    const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -50,12 +54,14 @@ export default function CoursesPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [coursesRes, programsRes] = await Promise.all([
-                AcademicService.getCourses({ limit: 100 }), // Fetch all
-                AcademicService.getPrograms({ limit: 100 })
+            const [coursesRes, programsRes, facultyRes] = await Promise.all([
+                AcademicService.getCourses({ limit: 100 }),
+                AcademicService.getPrograms({ limit: 100 }),
+                UserService.getByRole("FACULTY", { limit: 1000 })
             ]);
             setCourses(coursesRes.data || []);
             setPrograms(programsRes.data || []);
+            setFaculty(facultyRes || []);
         } catch (error) {
             console.error("Failed to fetch data", error);
             toast.error("Failed to load course data");
@@ -129,6 +135,21 @@ export default function CoursesPage() {
             toast.success("Course deleted successfully");
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to delete course");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleAssign = async () => {
+        if (!selected || !selectedFacultyId) return;
+        setActionLoading(true);
+        try {
+            await AcademicService.assignFaculty(selected._id, selectedFacultyId);
+            await fetchData();
+            setIsAssignOpen(false);
+            toast.success("Faculty assigned successfully");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to assign faculty");
         } finally {
             setActionLoading(false);
         }
@@ -240,6 +261,7 @@ export default function CoursesPage() {
                                 <TableHead>Program</TableHead>
                                 <TableHead>Sem</TableHead>
                                 <TableHead>Credits</TableHead>
+                                <TableHead>Faculty</TableHead>
                                 <TableHead className="w-12"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -261,6 +283,12 @@ export default function CoursesPage() {
                                         <TableCell>{course.semester}</TableCell>
                                         <TableCell>{course.credits}</TableCell>
                                         <TableCell>
+                                            <Badge variant="secondary" className="font-medium">
+                                                {typeof course.facultyId === 'object' && course.facultyId ? (course.facultyId as any).name :
+                                                    faculty.find(f => f._id === course.facultyId)?.name || 'Unassigned'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -268,6 +296,13 @@ export default function CoursesPage() {
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onClick={() => openEdit(course)}>
                                                         <Pencil className="h-4 w-4 mr-2" />Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => {
+                                                        setSelected(course);
+                                                        setSelectedFacultyId(typeof course.facultyId === 'string' ? course.facultyId : (course.facultyId as any)?._id || "");
+                                                        setIsAssignOpen(true);
+                                                    }}>
+                                                        <UserCheck className="h-4 w-4 mr-2" />Assign Faculty
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => { setSelected(course); setIsDeleteOpen(true); }} className="text-red-600">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
@@ -378,6 +413,36 @@ export default function CoursesPage() {
                         <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
                             {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Delete Course
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Assign Faculty Dialog */}
+            <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Assign Faculty to {selected?.name}</DialogTitle></DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Select Faculty</label>
+                            <Select value={selectedFacultyId} onValueChange={setSelectedFacultyId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select faculty member" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No faculty assigned</SelectItem>
+                                    {faculty.map(f => (
+                                        <SelectItem key={f._id} value={f._id}>{f.name} ({f.departmentName || 'General'})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAssignOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAssign} disabled={actionLoading}>
+                            {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Assign Faculty
                         </Button>
                     </DialogFooter>
                 </DialogContent>

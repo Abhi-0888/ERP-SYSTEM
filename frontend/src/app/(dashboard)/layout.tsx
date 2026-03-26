@@ -41,7 +41,7 @@ export default function DashboardLayout({
 
             // Workspace 4: Self-Service Portal (STUDENT, PARENT)
             if (activeRole === "STUDENT" || activeRole === ("PARENT" as any)) {
-                router.push("/portal");
+                router.push("/portal/dashboard");
                 return;
             }
 

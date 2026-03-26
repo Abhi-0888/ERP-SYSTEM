@@ -111,12 +111,12 @@ export default function LoginPage() {
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Email</label>
+                  <label className="text-sm font-medium">Email or Username</label>
                   <Input
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="registrar.srmap or email@example.com"
                     className="h-11"
                     required
                   />

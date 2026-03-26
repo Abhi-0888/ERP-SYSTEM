@@ -53,11 +53,19 @@ export default function EnrollmentsPage() {
         fetchData();
     }, [fetchData]);
 
-    const filtered = students.filter((s) =>
-        s.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.enrollmentNo.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filtered = students.filter((s) => {
+        const query = searchQuery.toLowerCase();
+        const firstName = s.firstName || (s.userId as any)?.name?.split(' ')[0] || "";
+        const lastName = s.lastName || (s.userId as any)?.name?.split(' ').slice(1).join(' ') || "";
+        const enrollmentNo = s.enrollmentNo || "";
+        
+        return (
+            firstName.toLowerCase().includes(query) ||
+            lastName.toLowerCase().includes(query) ||
+            enrollmentNo.toLowerCase().includes(query) ||
+            (s.userId as any)?.name?.toLowerCase().includes(query)
+        );
+    });
 
     const handleEnroll = async () => {
         if (!selectedStudent || !selectedCourse) {
@@ -108,7 +116,9 @@ export default function EnrollmentsPage() {
                             {filtered.length > 0 ? (
                                 filtered.map((student) => (
                                     <TableRow key={student._id}>
-                                        <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
+                                        <TableCell className="font-medium">
+                                            {student.firstName ? `${student.firstName} ${student.lastName}` : (student.userId as any)?.name || "Unknown Student"}
+                                        </TableCell>
                                         <TableCell><Badge variant="outline">{student.enrollmentNo}</Badge></TableCell>
                                         <TableCell>{(student.programId as any)?.name || "N/A"}</TableCell>
                                         <TableCell>Sem {student.currentSemester || 1}</TableCell>

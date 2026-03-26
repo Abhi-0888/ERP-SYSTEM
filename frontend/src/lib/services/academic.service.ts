@@ -76,5 +76,10 @@ export const AcademicService = {
     deleteAcademicYear: async (id: string): Promise<{ message: string }> => {
         const response = await api.delete(`/academic/academic-years/${id}`);
         return response.data;
+    },
+
+    assignFaculty: async (courseId: string, facultyId: string): Promise<Course> => {
+        const response = await api.patch(`/academic/courses/${courseId}/assign-faculty`, { facultyId });
+        return response.data;
     }
 };

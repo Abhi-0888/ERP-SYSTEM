@@ -6,6 +6,8 @@ import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters/http-
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
+    app.setGlobalPrefix('api');
+
     // Enable CORS with flexible origin config (comma-separated values supported)
     const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:3000';
     const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);

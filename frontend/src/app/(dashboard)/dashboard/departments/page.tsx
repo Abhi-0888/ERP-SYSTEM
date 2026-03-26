@@ -16,19 +16,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Building, Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from "lucide-react";
 import { AcademicService } from "@/lib/services/academic.service";
+import { UserService } from "@/lib/services/user.service";
 import { toast } from "sonner";
-
-interface Department {
-    _id: string;
-    name: string;
-    code: string;
-    hodId?: {
-        username: string;
-        email: string;
-    };
-    description?: string;
-    isActive: boolean;
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Department, User } from "@/lib/types";
 
 export default function DepartmentsPage() {
     const [departments, setDepartments] = useState<Department[]>([]);
@@ -38,23 +29,28 @@ export default function DepartmentsPage() {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [selected, setSelected] = useState<Department | null>(null);
-    const [formData, setFormData] = useState({ name: "", code: "", description: "" });
+    const [hods, setHods] = useState<User[]>([]);
+    const [formData, setFormData] = useState({ name: "", code: "", description: "", hodId: "" });
 
-    const fetchDepartments = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await AcademicService.getDepartments();
-            setDepartments(response.data || []);
+            const [deptsRes, hodsRes] = await Promise.all([
+                AcademicService.getDepartments(),
+                UserService.getByRole("HOD")
+            ]);
+            setDepartments(deptsRes.data || []);
+            setHods(hodsRes || []);
         } catch (error) {
-            console.error("Failed to fetch departments", error);
-            toast.error("Failed to load departments");
+            console.error("Failed to fetch data", error);
+            toast.error("Failed to load departments/HODs");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchDepartments();
+        fetchData();
     }, []);
 
     const filtered = departments.filter((d) =>
@@ -67,8 +63,9 @@ export default function DepartmentsPage() {
             await AcademicService.createDepartment(formData);
             toast.success("Department created successfully");
             setIsCreateOpen(false);
-            setFormData({ name: "", code: "", description: "" });
-            fetchDepartments();
+            setFormData({ name: "", code: "", description: "", hodId: "" });
+            setSelected(null);
+            fetchData();
         } catch (error) {
             toast.error("Failed to create department");
         }
@@ -81,7 +78,8 @@ export default function DepartmentsPage() {
             toast.success("Department updated successfully");
             setIsEditOpen(false);
             setSelected(null);
-            fetchDepartments();
+            setSelected(null);
+            fetchData();
         } catch (error) {
             toast.error("Failed to update department");
         }
@@ -94,7 +92,8 @@ export default function DepartmentsPage() {
             toast.success("Department deleted successfully");
             setIsDeleteOpen(false);
             setSelected(null);
-            fetchDepartments();
+            setSelected(null);
+            fetchData();
         } catch (error) {
             toast.error("Failed to delete department");
         }
@@ -102,7 +101,12 @@ export default function DepartmentsPage() {
 
     const openEdit = (dept: Department) => {
         setSelected(dept);
-        setFormData({ name: dept.name, code: dept.code, description: dept.description || "" });
+        setFormData({ 
+            name: dept.name, 
+            code: dept.code, 
+            description: dept.description || "",
+            hodId: typeof dept.hodId === 'object' ? (dept.hodId as any)?._id : (dept.hodId as string) || ""
+        });
         setIsEditOpen(true);
     };
 
@@ -152,7 +156,12 @@ export default function DepartmentsPage() {
                                     <TableRow key={dept._id}>
                                         <TableCell className="font-medium">{dept.name}</TableCell>
                                         <TableCell><Badge variant="outline">{dept.code}</Badge></TableCell>
-                                        <TableCell>{dept.hodId?.username || "Not Assigned"}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary">
+                                                {typeof dept.hodId === 'object' && dept.hodId ? (dept.hodId as any).name || (dept.hodId as any).username : 
+                                                 hods.find(h => h._id === (dept.hodId as any))?.name || "Not Assigned"}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell><Badge variant={dept.isActive ? "default" : "secondary"}>{dept.isActive ? "Active" : "Inactive"}</Badge></TableCell>
                                         <TableCell>
                                             <DropdownMenu>
@@ -182,6 +191,16 @@ export default function DepartmentsPage() {
                     <div className="space-y-4 py-4">
                         <div className="space-y-2"><label className="text-sm font-medium">Department Name</label><Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Computer Science" /></div>
                         <div className="space-y-2"><label className="text-sm font-medium">Code</label><Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="CSE" /></div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Head of Department (HOD)</label>
+                            <Select value={formData.hodId} onValueChange={(v) => setFormData({ ...formData, hodId: v })}>
+                                <SelectTrigger><SelectValue placeholder="Select HOD" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No HOD assigned</SelectItem>
+                                    {hods.map(h => <SelectItem key={h._id} value={h._id}>{h.name} ({h.email})</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <div className="space-y-2"><label className="text-sm font-medium">Description</label><Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Department description..." /></div>
                     </div>
                     <DialogFooter><Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button><Button onClick={handleCreate}>Create</Button></DialogFooter>
@@ -195,6 +214,16 @@ export default function DepartmentsPage() {
                     <div className="space-y-4 py-4">
                         <div className="space-y-2"><label className="text-sm font-medium">Department Name</label><Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
                         <div className="space-y-2"><label className="text-sm font-medium">Code</label><Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} /></div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Head of Department</label>
+                            <Select value={formData.hodId} onValueChange={(v) => setFormData({ ...formData, hodId: v })}>
+                                <SelectTrigger><SelectValue placeholder="Select HOD" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No HOD assigned</SelectItem>
+                                    {hods.map(h => <SelectItem key={h._id} value={h._id}>{h.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <div className="space-y-2"><label className="text-sm font-medium">Description</label><Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
                     </div>
                     <DialogFooter><Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button><Button onClick={handleEdit}>Save Changes</Button></DialogFooter>

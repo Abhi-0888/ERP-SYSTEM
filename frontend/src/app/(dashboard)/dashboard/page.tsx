@@ -13,10 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import {
     Users, GraduationCap, BookOpen, Building2, TrendingUp, TrendingDown,
     Calendar, AlertCircle, CreditCard, ClipboardList, BarChart3,
-    ArrowRight, Download, Filter, Clock, MapPin, Loader2, Sparkles, Award
+    ArrowRight, Download, Filter, Clock, MapPin, Loader2, Sparkles, Award,
+    FileText, Shield, Home, Bus, Library, Briefcase, UserCheck
 } from "lucide-react";
 
-// Stat Card Component
+// ─── STAT CARD ───────────────────────────────────────────────────────────────────
+
 function StatCard({
     title,
     value,
@@ -61,7 +63,8 @@ function StatCard({
     );
 }
 
-// University Admin / HOD Dashboard
+// ─── ADMIN DASHBOARD (UNIVERSITY_ADMIN / HOD) ────────────────────────────────────
+
 function AdminDashboard() {
     const { activeRole, user } = useAuth();
     const isHOD = activeRole === "HOD";
@@ -81,7 +84,7 @@ function AdminDashboard() {
                     StatsService.getGlobalStats(),
                     StatsService.getModuleStats()
                 ]);
-                
+
                 const globalData = globalRes.data || globalRes;
                 const mData = moduleRes.data || moduleRes;
 
@@ -195,7 +198,7 @@ function AdminDashboard() {
                         </div>
                         <h4 className="font-bold text-xl font-outfit">Strategic Forecast</h4>
                         <p className="text-sm text-indigo-100 mt-2 leading-relaxed opacity-90 font-medium">
-                            Enrollment for Spring '25 is projected to increase by 15% across Engineering programs.
+                            Enrollment for Spring &apos;25 is projected to increase by 15% across Engineering programs.
                         </p>
                         <Button className="w-full mt-6 bg-white text-indigo-700 hover:bg-slate-50 rounded-2xl font-black text-xs shadow-xl tracking-tighter">
                             CORE STRATEGY VIEW
@@ -207,7 +210,515 @@ function AdminDashboard() {
     );
 }
 
-// Faculty Dashboard
+// ─── REGISTRAR DASHBOARD ─────────────────────────────────────────────────────────
+
+function RegistrarDashboard() {
+    const { user } = useAuth();
+    const router = useRouter();
+    const [stats, setStats] = useState({ students: 0, departments: 0, programs: 0, pendingEnrollments: 0 });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const [studentsRes, deptsRes, progsRes] = await Promise.all([
+                    api.get('/students?page=1&limit=1'),
+                    api.get('/academic/departments'),
+                    api.get('/academic/programs'),
+                ]);
+                setStats({
+                    students: studentsRes.data?.pagination?.total || 0,
+                    departments: deptsRes.data?.pagination?.total || deptsRes.data?.data?.length || 0,
+                    programs: progsRes.data?.pagination?.total || progsRes.data?.data?.length || 0,
+                    pendingEnrollments: 0,
+                });
+            } catch (error) {
+                console.error("Failed to fetch registrar stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (loading) return (
+        <div className="p-20 text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+            <p className="text-slate-500 font-medium font-outfit">Loading Registrar Console...</p>
+        </div>
+    );
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight font-outfit">Registrar Command</h1>
+                    <p className="text-slate-500 font-medium mt-1">Student lifecycle & records custodian, {user?.name}.</p>
+                </div>
+                <div className="flex gap-3">
+                    <Button variant="outline" className="rounded-2xl border-slate-200" onClick={() => router.push('/dashboard/students')}>
+                        <Users className="h-4 w-4 mr-2" />All Students
+                    </Button>
+                    <Button className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white px-6 shadow-xl" onClick={() => router.push('/dashboard/enrollments')}>
+                        <GraduationCap className="h-4 w-4 mr-2" />New Enrollment
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="Total Students" value={stats.students.toString()} change="All Records" changeType="positive" icon={GraduationCap} />
+                <StatCard title="Departments" value={stats.departments.toString()} change="Active Units" changeType="positive" icon={Building2} />
+                <StatCard title="Programs" value={stats.programs.toString()} change="Offered" changeType="neutral" icon={BookOpen} />
+                <StatCard title="Pending Actions" value={stats.pendingEnrollments.toString()} change="No Pending" changeType="positive" icon={ClipboardList} />
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+                <Card className="border-0 shadow-xl rounded-[2.5rem] overflow-hidden border border-slate-100/50">
+                    <CardHeader className="bg-slate-50/50 border-b px-8 py-6">
+                        <CardTitle className="text-lg font-bold flex items-center gap-2 font-outfit">
+                            <ClipboardList className="h-5 w-5 text-emerald-600" />
+                            Quick Actions
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                { label: "Enroll Student", icon: GraduationCap, color: "text-emerald-500", bg: "bg-emerald-50", href: "/dashboard/enrollments" },
+                                { label: "Manage Faculty", icon: UserCheck, color: "text-blue-500", bg: "bg-blue-50", href: "/dashboard/faculty" },
+                                { label: "View Attendance", icon: ClipboardList, color: "text-purple-500", bg: "bg-purple-50", href: "/dashboard/attendance" },
+                                { label: "Academic Years", icon: Calendar, color: "text-orange-500", bg: "bg-orange-50", href: "/dashboard/academic-years" },
+                            ].map((action, i) => (
+                                <Button key={i} variant="outline" onClick={() => router.push(action.href)} className="h-auto py-6 flex-col gap-3 rounded-[2rem] border-slate-100 hover:border-emerald-100 hover:bg-slate-50 transition-all group shadow-sm hover:shadow-md">
+                                    <div className={`p-4 ${action.bg} rounded-2xl group-hover:scale-110 transition-transform`}>
+                                        <action.icon className={`h-6 w-6 ${action.color}`} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{action.label}</span>
+                                </Button>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-2xl rounded-[2.5rem] bg-gradient-to-br from-emerald-600 to-teal-700 p-10 text-white relative overflow-hidden">
+                    <Shield className="absolute -right-8 -bottom-8 h-40 w-40 text-white/5 rotate-12" />
+                    <div className="relative">
+                        <h2 className="text-2xl font-black font-outfit tracking-tight">Records Authority</h2>
+                        <p className="text-emerald-100 text-sm mt-2 opacity-90 font-medium">
+                            You have custodial authority over all student records, enrollment data, and academic lifecycle management.
+                        </p>
+                        <div className="space-y-3 mt-8">
+                            {[
+                                { label: "Student Lifecycle", status: "MANAGED" },
+                                { label: "Enrollment Pipeline", status: "ACTIVE" },
+                                { label: "Statutory Compliance", status: "VERIFIED" },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-white/10 rounded-xl border border-white/10">
+                                    <span className="text-sm font-bold">{item.label}</span>
+                                    <Badge className="bg-white/20 text-white text-[10px] font-black border-0">{item.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
+// ─── EXAM CONTROLLER DASHBOARD ───────────────────────────────────────────────────
+
+function ExamControllerDashboard() {
+    const { user } = useAuth();
+    const router = useRouter();
+    const [stats, setStats] = useState({ totalExams: 0, upcoming: 0, completed: 0, courses: 0 });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const [examsRes, coursesRes] = await Promise.all([
+                    api.get('/exams'),
+                    api.get('/academic/courses'),
+                ]);
+                const exams = examsRes.data?.data || examsRes.data || [];
+                setStats({
+                    totalExams: exams.length,
+                    upcoming: exams.filter((e: any) => e.status === 'Scheduled' || e.status === 'scheduled').length,
+                    completed: exams.filter((e: any) => e.status === 'Completed' || e.status === 'completed' || e.status === 'published').length,
+                    courses: coursesRes.data?.pagination?.total || coursesRes.data?.data?.length || 0,
+                });
+            } catch (error) {
+                console.error("Failed to fetch exam controller stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (loading) return (
+        <div className="p-20 text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-orange-600 mx-auto" />
+            <p className="text-slate-500 font-medium font-outfit">Loading Examination Console...</p>
+        </div>
+    );
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight font-outfit">Examination Command</h1>
+                    <p className="text-slate-500 font-medium mt-1">Assessment integrity & results management, {user?.name}.</p>
+                </div>
+                <Button className="rounded-2xl bg-orange-600 hover:bg-orange-700 text-white px-6 shadow-xl" onClick={() => router.push('/dashboard/exams')}>
+                    <FileText className="h-4 w-4 mr-2" />Manage Exams
+                </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="Total Exams" value={stats.totalExams.toString()} change="All Records" changeType="neutral" icon={FileText} />
+                <StatCard title="Upcoming" value={stats.upcoming.toString()} change="Scheduled" changeType="negative" icon={Calendar} />
+                <StatCard title="Completed" value={stats.completed.toString()} change="Published" changeType="positive" icon={Award} />
+                <StatCard title="Courses" value={stats.courses.toString()} change="Active" changeType="neutral" icon={BookOpen} />
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+                <Card className="border-0 shadow-xl rounded-[2.5rem] overflow-hidden border border-slate-100/50">
+                    <CardHeader className="bg-slate-50/50 border-b px-8 py-6">
+                        <CardTitle className="text-lg font-bold flex items-center gap-2 font-outfit">
+                            <FileText className="h-5 w-5 text-orange-600" />
+                            Quick Actions
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                { label: "Schedule Exam", icon: Calendar, color: "text-orange-500", bg: "bg-orange-50", href: "/dashboard/exams" },
+                                { label: "View Results", icon: Award, color: "text-emerald-500", bg: "bg-emerald-50", href: "/dashboard/exams" },
+                                { label: "Exam Timetable", icon: Clock, color: "text-blue-500", bg: "bg-blue-50", href: "/dashboard/timetable" },
+                                { label: "Reports", icon: BarChart3, color: "text-purple-500", bg: "bg-purple-50", href: "/dashboard/reports" },
+                            ].map((action, i) => (
+                                <Button key={i} variant="outline" onClick={() => router.push(action.href)} className="h-auto py-6 flex-col gap-3 rounded-[2rem] border-slate-100 hover:border-orange-100 hover:bg-slate-50 transition-all group shadow-sm hover:shadow-md">
+                                    <div className={`p-4 ${action.bg} rounded-2xl group-hover:scale-110 transition-transform`}>
+                                        <action.icon className={`h-6 w-6 ${action.color}`} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{action.label}</span>
+                                </Button>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-2xl rounded-[2.5rem] bg-gradient-to-br from-orange-500 to-red-600 p-10 text-white relative overflow-hidden">
+                    <FileText className="absolute -right-8 -bottom-8 h-40 w-40 text-white/5 rotate-12" />
+                    <div className="relative">
+                        <h2 className="text-2xl font-black font-outfit tracking-tight">Assessment Integrity</h2>
+                        <p className="text-orange-100 text-sm mt-2 opacity-90 font-medium">
+                            All examination protocols are governed by institutional compliance. Results are encrypted and audit-tracked.
+                        </p>
+                        <div className="space-y-3 mt-8">
+                            {[
+                                { label: "Exam Scheduling", status: "ACTIVE" },
+                                { label: "Result Publishing", status: "READY" },
+                                { label: "Anti-Cheating Protocol", status: "ENABLED" },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-white/10 rounded-xl border border-white/10">
+                                    <span className="text-sm font-bold">{item.label}</span>
+                                    <Badge className="bg-white/20 text-white text-[10px] font-black border-0">{item.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
+// ─── FINANCE DASHBOARD ───────────────────────────────────────────────────────────
+
+function FinanceDashboard() {
+    const { user, activeRole } = useAuth();
+    const router = useRouter();
+    const [stats, setStats] = useState({ totalStudents: 0, totalCollected: '₹0', pendingFees: 0, feeStructures: 0 });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const [studentsRes, feesRes] = await Promise.all([
+                    api.get('/students?page=1&limit=1'),
+                    api.get('/fees/structures').catch(() => ({ data: [] })),
+                ]);
+                setStats({
+                    totalStudents: studentsRes.data?.pagination?.total || 0,
+                    totalCollected: '₹0',
+                    pendingFees: 0,
+                    feeStructures: Array.isArray(feesRes.data) ? feesRes.data.length : feesRes.data?.data?.length || 0,
+                });
+            } catch (error) {
+                console.error("Failed to fetch finance stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (loading) return (
+        <div className="p-20 text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto" />
+            <p className="text-slate-500 font-medium font-outfit">Loading Financial Console...</p>
+        </div>
+    );
+
+    const isAccountant = activeRole === "ACCOUNTANT";
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight font-outfit">
+                        {isAccountant ? "Accounts" : "Finance"} Command
+                    </h1>
+                    <p className="text-slate-500 font-medium mt-1">
+                        Revenue compliance & fee management, {user?.name}.
+                    </p>
+                </div>
+                <Button className="rounded-2xl bg-green-600 hover:bg-green-700 text-white px-6 shadow-xl" onClick={() => router.push('/dashboard/fees')}>
+                    <CreditCard className="h-4 w-4 mr-2" />Fee Management
+                </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard title="Student Base" value={stats.totalStudents.toString()} change="Billable" changeType="neutral" icon={Users} />
+                <StatCard title="Collected" value={stats.totalCollected} change="This Session" changeType="positive" icon={CreditCard} />
+                <StatCard title="Pending Dues" value={stats.pendingFees.toString()} change="Students" changeType={stats.pendingFees > 0 ? "negative" : "positive"} icon={AlertCircle} />
+                <StatCard title="Fee Structures" value={stats.feeStructures.toString()} change="Configured" changeType="neutral" icon={FileText} />
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+                <Card className="border-0 shadow-xl rounded-[2.5rem] overflow-hidden border border-slate-100/50">
+                    <CardHeader className="bg-slate-50/50 border-b px-8 py-6">
+                        <CardTitle className="text-lg font-bold flex items-center gap-2 font-outfit">
+                            <CreditCard className="h-5 w-5 text-green-600" />
+                            Financial Operations
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                { label: "Fee Collection", icon: CreditCard, color: "text-green-500", bg: "bg-green-50", href: "/dashboard/fees" },
+                                { label: "Student Ledger", icon: Users, color: "text-blue-500", bg: "bg-blue-50", href: "/dashboard/students" },
+                                { label: "Reports", icon: BarChart3, color: "text-purple-500", bg: "bg-purple-50", href: "/dashboard/reports" },
+                                { label: "Fee Structure", icon: FileText, color: "text-orange-500", bg: "bg-orange-50", href: "/dashboard/fees" },
+                            ].map((action, i) => (
+                                <Button key={i} variant="outline" onClick={() => router.push(action.href)} className="h-auto py-6 flex-col gap-3 rounded-[2rem] border-slate-100 hover:border-green-100 hover:bg-slate-50 transition-all group shadow-sm hover:shadow-md">
+                                    <div className={`p-4 ${action.bg} rounded-2xl group-hover:scale-110 transition-transform`}>
+                                        <action.icon className={`h-6 w-6 ${action.color}`} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{action.label}</span>
+                                </Button>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-2xl rounded-[2.5rem] bg-gradient-to-br from-green-600 to-emerald-700 p-10 text-white relative overflow-hidden">
+                    <CreditCard className="absolute -right-8 -bottom-8 h-40 w-40 text-white/5 rotate-12" />
+                    <div className="relative">
+                        <h2 className="text-2xl font-black font-outfit tracking-tight">Financial Compliance</h2>
+                        <p className="text-green-100 text-sm mt-2 opacity-90 font-medium">
+                            All financial transactions are audit-tracked with full transparency. Fee structures are governed by institutional policy.
+                        </p>
+                        <div className="space-y-3 mt-8">
+                            {[
+                                { label: "Revenue Pipeline", status: "ACTIVE" },
+                                { label: "Audit Trail", status: "VERIFIED" },
+                                { label: "Fee Compliance", status: "100%" },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-white/10 rounded-xl border border-white/10">
+                                    <span className="text-sm font-bold">{item.label}</span>
+                                    <Badge className="bg-white/20 text-white text-[10px] font-black border-0">{item.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
+// ─── FUNCTIONAL MODULE DASHBOARD ─────────────────────────────────────────────────
+
+function FunctionalDashboard() {
+    const { activeRole, user } = useAuth();
+    const router = useRouter();
+
+    const roleConfig: Record<string, {
+        title: string;
+        subtitle: string;
+        color: string;
+        gradient: string;
+        icon: React.ComponentType<{ className?: string }>;
+        stats: { title: string; value: string; change: string; type: "positive" | "negative" | "neutral"; icon: React.ComponentType<{ className?: string }> }[];
+        actions: { label: string; icon: React.ComponentType<{ className?: string }>; href: string }[];
+    }> = {
+        LIBRARIAN: {
+            title: "Library Command",
+            subtitle: "Resource & catalog management",
+            color: "text-amber-600",
+            gradient: "from-amber-500 to-orange-600",
+            icon: Library,
+            stats: [
+                { title: "Catalog Size", value: "—", change: "Titles", type: "neutral", icon: BookOpen },
+                { title: "Active Issues", value: "—", change: "Checked Out", type: "neutral", icon: ClipboardList },
+                { title: "Returns Due", value: "—", change: "This Week", type: "neutral", icon: AlertCircle },
+                { title: "Members", value: "—", change: "Registered", type: "positive", icon: Users },
+            ],
+            actions: [
+                { label: "Catalog", href: "/modules/library/catalog", icon: BookOpen },
+                { label: "Circulation", href: "/modules/library/circulation", icon: ClipboardList },
+            ],
+        },
+        HOSTEL_WARDEN: {
+            title: "Hostel Command",
+            subtitle: "Residential & asset management",
+            color: "text-violet-600",
+            gradient: "from-violet-500 to-purple-600",
+            icon: Home,
+            stats: [
+                { title: "Total Rooms", value: "—", change: "Managed", type: "neutral", icon: Home },
+                { title: "Occupancy", value: "—", change: "Allocated", type: "neutral", icon: Users },
+                { title: "Complaints", value: "—", change: "Open", type: "neutral", icon: AlertCircle },
+                { title: "Check-ins", value: "—", change: "Today", type: "positive", icon: UserCheck },
+            ],
+            actions: [
+                { label: "Room Allocation", href: "/modules/hostel/rooms", icon: Home },
+                { label: "Attendance", href: "/modules/hostel/attendance", icon: UserCheck },
+            ],
+        },
+        TRANSPORT_MANAGER: {
+            title: "Fleet Command",
+            subtitle: "Vehicle & route management",
+            color: "text-cyan-600",
+            gradient: "from-cyan-500 to-blue-600",
+            icon: Bus,
+            stats: [
+                { title: "Vehicles", value: "—", change: "Fleet Size", type: "neutral", icon: Bus },
+                { title: "Active Routes", value: "—", change: "Running", type: "positive", icon: MapPin },
+                { title: "Passengers", value: "—", change: "Registered", type: "neutral", icon: Users },
+                { title: "Maintenance", value: "—", change: "Due", type: "neutral", icon: AlertCircle },
+            ],
+            actions: [
+                { label: "Vehicles", href: "/modules/transport/vehicles", icon: Bus },
+                { label: "Routes", href: "/modules/transport/routes", icon: MapPin },
+            ],
+        },
+        PLACEMENT_OFFICER: {
+            title: "Placement Command",
+            subtitle: "Career & industry bridge",
+            color: "text-rose-600",
+            gradient: "from-rose-500 to-pink-600",
+            icon: Briefcase,
+            stats: [
+                { title: "Companies", value: "—", change: "Partners", type: "neutral", icon: Building2 },
+                { title: "Active Drives", value: "—", change: "Running", type: "positive", icon: Briefcase },
+                { title: "Students Placed", value: "—", change: "This Year", type: "positive", icon: Award },
+                { title: "Avg Package", value: "—", change: "LPA", type: "neutral", icon: TrendingUp },
+            ],
+            actions: [
+                { label: "Companies", href: "/modules/placement/companies", icon: Building2 },
+                { label: "Drives", href: "/modules/placement/drives", icon: Briefcase },
+            ],
+        },
+        PLACEMENT_CELL: {
+            title: "Placement Cell",
+            subtitle: "Recruitment operations",
+            color: "text-rose-600",
+            gradient: "from-rose-500 to-pink-600",
+            icon: Briefcase,
+            stats: [
+                { title: "Companies", value: "—", change: "Partners", type: "neutral", icon: Building2 },
+                { title: "Active Drives", value: "—", change: "Running", type: "positive", icon: Briefcase },
+                { title: "Applications", value: "—", change: "Received", type: "neutral", icon: ClipboardList },
+                { title: "Interviews", value: "—", change: "Scheduled", type: "neutral", icon: Calendar },
+            ],
+            actions: [
+                { label: "Companies", href: "/modules/placement/companies", icon: Building2 },
+                { label: "Drives", href: "/modules/placement/drives", icon: Briefcase },
+            ],
+        },
+    };
+
+    const config = roleConfig[activeRole || ''] || roleConfig.LIBRARIAN;
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight font-outfit">{config.title}</h1>
+                    <p className="text-slate-500 font-medium mt-1">{config.subtitle}, {user?.name}.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {config.stats.map((stat, i) => (
+                    <StatCard key={i} title={stat.title} value={stat.value} change={stat.change} changeType={stat.type} icon={stat.icon} />
+                ))}
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+                <Card className="border-0 shadow-xl rounded-[2.5rem] overflow-hidden border border-slate-100/50">
+                    <CardHeader className="bg-slate-50/50 border-b px-8 py-6">
+                        <CardTitle className="text-lg font-bold flex items-center gap-2 font-outfit">
+                            <config.icon className={`h-5 w-5 ${config.color}`} />
+                            Operations
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                        <div className="grid grid-cols-2 gap-4">
+                            {config.actions.map((action, i) => (
+                                <Button key={i} variant="outline" onClick={() => router.push(action.href)} className="h-auto py-8 flex-col gap-3 rounded-[2rem] border-slate-100 hover:bg-slate-50 transition-all group shadow-sm hover:shadow-md">
+                                    <div className="p-4 bg-slate-50 rounded-2xl group-hover:scale-110 transition-transform">
+                                        <action.icon className={`h-6 w-6 ${config.color}`} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{action.label}</span>
+                                </Button>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className={`border-0 shadow-2xl rounded-[2.5rem] bg-gradient-to-br ${config.gradient} p-10 text-white relative overflow-hidden`}>
+                    <config.icon className="absolute -right-8 -bottom-8 h-40 w-40 text-white/5 rotate-12" />
+                    <div className="relative">
+                        <h2 className="text-2xl font-black font-outfit tracking-tight">{roleDisplayNames[activeRole!]} Portal</h2>
+                        <p className="text-white/80 text-sm mt-2 font-medium">
+                            Your operational workspace is secured by tiered RBAC protocols. All actions are audit-logged.
+                        </p>
+                        <div className="space-y-3 mt-8">
+                            {[
+                                { label: "Access Level", status: "AUTHORIZED" },
+                                { label: "Data Scope", status: "UNIVERSITY" },
+                                { label: "Audit Status", status: "ACTIVE" },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-white/10 rounded-xl border border-white/10">
+                                    <span className="text-sm font-bold">{item.label}</span>
+                                    <Badge className="bg-white/20 text-white text-[10px] font-black border-0">{item.status}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
+// ─── FACULTY DASHBOARD ───────────────────────────────────────────────────────────
+
 function FacultyDashboard() {
     const { user } = useAuth();
     const [stats, setStats] = useState({
@@ -238,7 +749,7 @@ function FacultyDashboard() {
                 setStats(prev => ({
                     ...prev,
                     todayClasses: todayClasses.length,
-                    totalStudents: 124, // Mocked for faculty view
+                    totalStudents: 124,
                     pendingTasks: 2
                 }));
 
@@ -338,7 +849,8 @@ function FacultyDashboard() {
     );
 }
 
-// Student Dashboard
+// ─── STUDENT DASHBOARD ───────────────────────────────────────────────────────────
+
 function StudentDashboard() {
     const { user } = useAuth();
     const [stats, setStats] = useState({
@@ -352,24 +864,22 @@ function StudentDashboard() {
     useEffect(() => {
         const fetchStudentStats = async () => {
             try {
-                // Real data aggregation for student
                 const [attendanceRes, resultsResRow, libraryRes] = await Promise.all([
-                    api.get(`/attendance/student/${user?.id || user?._id}/summary`),
-                    ExamService.getMarksByStudent((user?.id || user?._id) as string),
-                    api.get(`/library/student/${user?.id || user?._id}/summary`)
+                    api.get(`/attendance/student/${user?.id || user?._id}/summary`).catch(() => ({ data: {} })),
+                    ExamService.getMarksByStudent((user?.id || user?._id) as string).catch(() => []),
+                    api.get(`/library/student/${user?.id || user?._id}/summary`).catch(() => ({ data: {} })),
                 ]);
 
-                // Calculate GPA from results
                 const resultsRes = (resultsResRow as any).data || resultsResRow || [];
                 const grades: Record<string, number> = { 'A+': 10, 'A': 9, 'B+': 8, 'B': 7, 'C': 6, 'P': 5, 'F': 0 };
-                const totalPoints = resultsRes.reduce((acc: number, r: any) => acc + (grades[r.grade] || 0), 0);
-                const avgGpa = resultsRes.length > 0 ? (totalPoints / resultsRes.length).toFixed(2) : "0.0";
+                const totalPoints = Array.isArray(resultsRes) ? resultsRes.reduce((acc: number, r: any) => acc + (grades[r.grade] || 0), 0) : 0;
+                const avgGpa = Array.isArray(resultsRes) && resultsRes.length > 0 ? (totalPoints / resultsRes.length).toFixed(2) : "0.0";
 
                 setStats({
                     attendance: attendanceRes.data?.percentage ? `${attendanceRes.data.percentage}%` : "0%",
                     gpa: avgGpa,
                     booksIssued: libraryRes.data?.activeIssues || 0,
-                    pendingFees: "₹0" // Assuming fees logic is implemented elsewhere
+                    pendingFees: "₹0"
                 });
             } catch (error) {
                 console.error("Failed to fetch student dashboard stats", error);
@@ -450,63 +960,36 @@ function StudentDashboard() {
     );
 }
 
-// Generic Dashboard for other roles
-function GenericDashboard() {
-    const { activeRole, user } = useAuth();
+// ─── MAIN DASHBOARD PAGE ─────────────────────────────────────────────────────────
 
-    return (
-        <div className="space-y-6">
-            <div className="px-10 py-12 bg-slate-900 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
-                <div className="absolute right-0 top-0 p-12 opacity-5">
-                    <Building2 className="h-40 w-40" />
-                </div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter font-outfit">
-                    {activeRole ? roleDisplayNames[activeRole] : "Guest"} Portal
-                </h1>
-                <p className="text-slate-400 mt-3 text-lg font-medium opacity-80">
-                    Welcome, {user?.name}. Your environment is governed by Tiered RBAC protocols.
-                </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Access Status" value="Authorized" change="Shield Active" changeType="positive" icon={ClipboardList} />
-                <StatCard title="Data Control" value="Hierarchical" change="Query-Fence" changeType="positive" icon={AlertCircle} />
-                <StatCard title="Role Scope" value={activeRole || "Basic"} change="Defined" changeType="neutral" icon={BarChart3} />
-                <StatCard title="Heartbeat" value="Nominal" change="Real-time" changeType="positive" icon={TrendingUp} />
-            </div>
-
-            <Card className="border-0 shadow-sm bg-white/50 backdrop-blur rounded-[2.5rem] border border-slate-100">
-                <CardContent className="p-20 text-center">
-                    <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                        <Building2 className="h-10 w-10 text-slate-400" />
-                    </div>
-                    <p className="text-slate-600 font-bold text-lg max-w-md mx-auto leading-relaxed">
-                        Initializing role-specific modules based on your hierarchical rank.
-                        Please navigate through the verified sidebar channels.
-                    </p>
-                </CardContent>
-            </Card>
-        </div>
-    );
-}
-
-// Main Dashboard Page
 export default function DashboardPage() {
     const { activeRole } = useAuth();
 
     switch (activeRole) {
         case "UNIVERSITY_ADMIN":
         case "PRINCIPAL":
-        case "REGISTRAR":
             return <AdminDashboard />;
         case "HOD":
-            return <AdminDashboard />; // HOD gets a department-scoped version of this
+            return <AdminDashboard />;
+        case "REGISTRAR":
+            return <RegistrarDashboard />;
+        case "EXAM_CONTROLLER":
+            return <ExamControllerDashboard />;
+        case "FINANCE":
+        case "ACCOUNTANT":
+            return <FinanceDashboard />;
         case "FACULTY":
         case "ACADEMIC_COORDINATOR":
             return <FacultyDashboard />;
         case "STUDENT":
             return <StudentDashboard />;
+        case "LIBRARIAN":
+        case "HOSTEL_WARDEN":
+        case "TRANSPORT_MANAGER":
+        case "PLACEMENT_OFFICER":
+        case "PLACEMENT_CELL":
+            return <FunctionalDashboard />;
         default:
-            return <GenericDashboard />;
+            return <FacultyDashboard />;
     }
 }

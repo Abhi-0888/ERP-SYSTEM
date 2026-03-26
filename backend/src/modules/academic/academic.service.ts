@@ -335,7 +335,7 @@ export class AcademicService {
                 .limit(limit)
                 .populate('programId', 'name code')
                 .populate('departmentId', 'name code')
-                .populate('facultyId', 'username email')
+                .populate('facultyId', 'username email name')
                 .exec();
 
             const total = await this.courseModel.countDocuments(filter);
@@ -351,7 +351,10 @@ export class AcademicService {
 
     async findCourseById(id: string, currentUser: any): Promise<Course> {
         try {
-            const course = await this.courseModel.findById(id).populate('programId', 'name code').populate('departmentId', 'name code universityId');
+            const course = await this.courseModel.findById(id)
+                .populate('programId', 'name code')
+                .populate('departmentId', 'name code universityId')
+                .populate('facultyId', 'username email name');
             if (!course) {
                 throw new NotFoundException('Course not found');
             }
@@ -392,7 +395,31 @@ export class AcademicService {
     async getCoursesByProgram(programId: string, currentUser: any): Promise<Course[]> {
         try {
             await this.findProgramById(programId, currentUser);
-            return await this.courseModel.find({ programId }).sort({ semester: 1 }).populate('facultyId', 'username email').exec();
+            return await this.courseModel.find({ programId }).sort({ semester: 1 }).populate('facultyId', 'username email name').exec();
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async assignFacultyToCourse(courseId: string, facultyId: string, currentUser: any): Promise<Course> {
+        try {
+            // Verify the course exists and user has access
+            await this.findCourseById(courseId, currentUser);
+            
+            const course = await this.courseModel.findByIdAndUpdate(
+                courseId, 
+                { facultyId }, 
+                { new: true }
+            )
+            .populate('facultyId', 'username email name')
+            .populate('programId', 'name code')
+            .populate('departmentId', 'name code');
+
+            if (!course) {
+                throw new NotFoundException('Course not found');
+            }
+
+            return course;
         } catch (error) {
             throw error;
         }

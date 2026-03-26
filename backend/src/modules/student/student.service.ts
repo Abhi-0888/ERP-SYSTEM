@@ -32,6 +32,7 @@ export class StudentService {
         // 3. Create User account with STUDENT role
         const user = await this.userService.create({
             username,
+            name: `${dto.firstName} ${dto.lastName}`.trim(),
             email: dto.email,
             password: tempPassword,
             role: Role.STUDENT,
@@ -110,7 +111,7 @@ export class StudentService {
                 .find(query)
                 .skip(skip)
                 .limit(limit)
-                .populate('userId', 'username email')
+                .populate('userId', 'username email name')
                 .populate('programId', 'name code')
                 .populate('departmentId', 'name code universityId')
                 .populate('academicYearId', 'year')
@@ -136,7 +137,7 @@ export class StudentService {
         try {
             const student = await this.studentProfileModel
                 .findById(id)
-                .populate('userId', 'username email')
+                .populate('userId', 'username email name phoneNumber')
                 .populate('programId', 'name code')
                 .populate('departmentId', 'name code universityId')
                 .populate('academicYearId', 'year');

@@ -85,9 +85,10 @@ export class TimetableController {
         try {
             return await this.timetableService.getTimetableForStudent(studentId, req.user);
         } catch (error) {
+            if (error instanceof HttpException) throw error;
             throw new HttpException(
                 error.message || 'Failed to fetch timetable for student',
-                HttpStatus.INTERNAL_SERVER_ERROR,
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
     }
@@ -160,24 +161,6 @@ export class TimetableController {
             throw new HttpException(
                 error.message || 'Failed to delete slot',
                 HttpStatus.BAD_REQUEST,
-            );
-        }
-    }
-
-    // ============= STUDENT TIMETABLE =============
-
-    @Get('student/:studentId')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.REGISTRAR)
-    async getStudentTimetable(
-        @Param('studentId') studentId: string,
-        @Query('academicYearId') academicYearId?: string,
-    ) {
-        try {
-            return await this.timetableService.getStudentTimetable(studentId, academicYearId);
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'Failed to fetch student timetable',
-                HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
     }

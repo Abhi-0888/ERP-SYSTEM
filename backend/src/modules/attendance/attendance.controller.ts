@@ -29,10 +29,12 @@ export class AttendanceController {
     // ============= ATTENDANCE MARKING =============
 
     @Post()
-    @Roles(Role.FACULTY, Role.HOD, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.FACULTY, Role.HOD, Role.ACADEMIC_COORDINATOR, Role.UNIVERSITY_ADMIN)
     async markAttendance(@Body() dto: MarkAttendanceDto, @Request() req) {
         try {
-            return await this.attendanceService.markAttendance(dto, req.user);
+            // Auto-inject markedBy from authenticated user
+            const enrichedDto = { ...dto, markedBy: req.user.sub };
+            return await this.attendanceService.markAttendance(enrichedDto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to mark attendance',
@@ -42,10 +44,12 @@ export class AttendanceController {
     }
 
     @Post('bulk')
-    @Roles(Role.FACULTY, Role.HOD, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.FACULTY, Role.HOD, Role.ACADEMIC_COORDINATOR, Role.UNIVERSITY_ADMIN)
     async markBulkAttendance(@Body('attendance') dtos: MarkAttendanceDto[], @Request() req) {
         try {
-            return await this.attendanceService.markBulkAttendance(dtos, req.user);
+            // Auto-inject markedBy for each record
+            const enrichedDtos = dtos.map(dto => ({ ...dto, markedBy: req.user.sub }));
+            return await this.attendanceService.markBulkAttendance(enrichedDtos, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to mark attendance',
@@ -95,6 +99,9 @@ export class AttendanceController {
         try {
             return await this.attendanceService.getStudentAttendance(req.user, studentId, courseId);
         } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
             throw new HttpException(
                 error.message || 'Failed to fetch student attendance',
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -103,11 +110,14 @@ export class AttendanceController {
     }
 
     @Patch(':id')
-    @Roles(Role.FACULTY, Role.HOD, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.FACULTY, Role.HOD, Role.ACADEMIC_COORDINATOR, Role.UNIVERSITY_ADMIN)
     async updateAttendance(@Param('id') id: string, @Body() dto: UpdateAttendanceDto, @Request() req) {
         try {
             return await this.attendanceService.updateAttendance(id, dto, req.user);
         } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
             throw new HttpException(
                 error.message || 'Failed to update attendance',
                 HttpStatus.BAD_REQUEST,

@@ -29,6 +29,7 @@ export class StudentController {
     @Post('enroll')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
     async enrollStudent(@Body() dto: CreateStudentDto, @Request() req) {
+        console.log('RECEIVED DTO IN CONTROLLER:', dto);
         try {
             return await this.studentService.enrollStudent(dto as any, req.user);
         } catch (error) {

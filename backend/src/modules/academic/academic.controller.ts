@@ -338,6 +338,23 @@ export class AcademicController {
         }
     }
 
+    @Patch('courses/:id/assign-faculty')
+    @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.HOD, Role.ACADEMIC_COORDINATOR)
+    async assignFacultyToCourse(
+        @Param('id') id: string,
+        @Body('facultyId') facultyId: string,
+        @Request() req,
+    ) {
+        try {
+            return await this.academicService.assignFacultyToCourse(id, facultyId, req.user);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to assign faculty to course',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+    }
+
     // ============= REPORTS =============
 
     @Get('reports/overview')

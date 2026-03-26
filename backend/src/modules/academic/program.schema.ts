@@ -20,6 +20,12 @@ export class Program {
     @Prop({ type: String, enum: ['UG', 'PG', 'Diploma', 'PhD'] })
     level: string;
 
+    @Prop({ type: String, enum: ['BACHELOR', 'MASTER', 'DIPLOMA', 'PHD'] })
+    type: string;
+
+    @Prop()
+    totalSemesters: number;
+
     @Prop()
     description: string;
 
