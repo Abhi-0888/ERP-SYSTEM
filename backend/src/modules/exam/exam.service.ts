@@ -147,6 +147,7 @@ export class ExamService {
                 percentage: (marksDto.obtainedMarks / exam.totalMarks) * 100,
                 isPass: marksDto.obtainedMarks >= (exam.passingMarks || 0),
                 enteredBy: currentUser.id,
+                gradePoints: this.calculateGradePoints(marksDto.obtainedMarks, exam.totalMarks),
                 status: 'Approved'
             };
 
@@ -251,5 +252,16 @@ export class ExamService {
         } catch (error) {
             throw error;
         }
+    }
+
+    private calculateGradePoints(obtainedMarks: number, totalMarks: number): number {
+        const percentage = (obtainedMarks / totalMarks) * 100;
+        if (percentage >= 90) return 10;
+        if (percentage >= 80) return 9;
+        if (percentage >= 70) return 8;
+        if (percentage >= 60) return 7;
+        if (percentage >= 50) return 6;
+        if (percentage >= 40) return 5;
+        return 0;
     }
 }

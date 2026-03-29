@@ -216,7 +216,7 @@ export class PlacementController {
     // ============= REPORTS =============
 
     @Get('reports/statistics')
-    @Roles(Role.PLACEMENT_OFFICER, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.STUDENT, Role.PLACEMENT_OFFICER, Role.UNIVERSITY_ADMIN)
     async getPlacementStatistics(@Query('universityId') universityId?: string) {
         try {
             return await this.placementService.generatePlacementStatistics(universityId);

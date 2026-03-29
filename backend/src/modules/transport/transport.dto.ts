@@ -44,3 +44,11 @@ export class CreateRouteDto {
 
 export class UpdateVehicleDto extends CreateVehicleDto { }
 export class UpdateRouteDto extends CreateRouteDto { }
+
+export class EnrollTransportDto {
+    @IsMongoId()
+    routeId: string;
+
+    @IsString()
+    pickupPoint: string;
+}

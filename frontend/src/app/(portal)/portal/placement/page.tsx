@@ -17,31 +17,54 @@ import { Button } from "@/components/ui/button";
 export default function StudentPlacementPage() {
     const [jobs, setJobs] = useState<any[]>([]);
     const [applications, setApplications] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [applying, setApplying] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
 
+    const fetchPlacementData = async () => {
+        const userId = (user as any)?.id || (user as any)?._id;
+        if (!userId) return;
+        try {
+            const [jobsRes, appsRes, statsRes] = await Promise.all([
+                PlacementService.getAllJobs(),
+                PlacementService.getStudentApplications(userId),
+                PlacementService.getStats()
+            ]);
+            setJobs(jobsRes.data || jobsRes || []);
+            setApplications(appsRes || []);
+            setStats(statsRes);
+            setError(null);
+        } catch (err: any) {
+            console.error("Failed to fetch placement data", err);
+            setError("Failed to load placement records. Please try again later.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchPlacementData = async () => {
-            const userId = (user as any)?.id || (user as any)?._id;
-            if (!userId) return;
-            try {
-                const [jobsRes, appsRes] = await Promise.all([
-                    PlacementService.getAllJobs(),
-                    PlacementService.getStudentApplications(userId)
-                ]);
-                setJobs(jobsRes.data || jobsRes || []);
-                setApplications(appsRes.data || appsRes || []);
-                setError(null);
-            } catch (err: any) {
-                console.error("Failed to fetch placement data", err);
-                setError("Failed to load placement records. Please try again later.");
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchPlacementData();
     }, [user]);
+
+    const handleApply = async (jobId: string) => {
+        const userId = (user as any)?.id || (user as any)?._id;
+        if (!userId) return;
+        
+        setApplying(jobId);
+        try {
+            await PlacementService.applyForJob({ jobId, studentId: userId });
+            alert("Application submitted successfully!");
+            // Refresh applications
+            const appsRes = await PlacementService.getStudentApplications(userId);
+            setApplications(appsRes || []);
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to apply for job");
+        } finally {
+            setApplying(null);
+        }
+    };
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -81,9 +104,9 @@ export default function StudentPlacementPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card className="border-0 shadow-sm bg-white rounded-[2rem] p-8 border-l-4 border-l-blue-500">
                     <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-2">Live Drives</p>
-                    <p className="text-3xl font-black text-slate-900">{jobs.length}</p>
+                    <p className="text-3xl font-black text-slate-900">{stats?.activeJobPostings || jobs.length}</p>
                     <div className="flex flex-wrap gap-2 mt-4">
-                        <Badge className="bg-blue-50 text-blue-600 border-0 font-bold text-[9px]">3 FAANG+</Badge>
+                        <Badge className="bg-blue-50 text-blue-600 border-0 font-bold text-[9px]">ACTIVE</Badge>
                     </div>
                 </Card>
                 <Card className="border-0 shadow-sm bg-white rounded-[2rem] p-8 border-l-4 border-l-emerald-500">
@@ -91,19 +114,19 @@ export default function StudentPlacementPage() {
                     <p className="text-3xl font-black text-slate-900">{applications.length}</p>
                     <div className="mt-4 flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-emerald-500" />
-                        <span className="text-xs font-bold text-slate-500">2 In Interview</span>
+                        <span className="text-xs font-bold text-slate-500">{applications.filter(a => a.status === 'Shortlisted').length} Shortlisted</span>
                     </div>
                 </Card>
                 <Card className="border-0 shadow-sm bg-white rounded-[2rem] p-8 border-l-4 border-l-indigo-500">
-                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-2">Avg. Package</p>
-                    <p className="text-3xl font-black text-slate-900">₹8.4 L</p>
-                    <p className="text-xs font-medium text-slate-500 mt-2">Department Average</p>
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-2">Placement Rate</p>
+                    <p className="text-3xl font-black text-slate-900">{stats?.placementRate || "0.00"}%</p>
+                    <p className="text-xs font-medium text-slate-500 mt-2">Overall Success</p>
                 </Card>
                 <Card className="border-0 shadow-sm bg-indigo-600 text-white rounded-[2rem] p-8">
-                    <p className="text-white/60 font-black text-[10px] uppercase tracking-widest mb-2">Profile Status</p>
-                    <p className="text-3xl font-black">92%</p>
+                    <p className="text-white/60 font-black text-[10px] uppercase tracking-widest mb-2">Total Job Posts</p>
+                    <p className="text-3xl font-black">{stats?.totalJobPostings || 0}</p>
                     <div className="h-1 bg-white/20 rounded-full mt-4 overflow-hidden">
-                        <div className="h-full bg-white w-[92%]" />
+                        <div className="h-full bg-white w-full" />
                     </div>
                 </Card>
             </div>
@@ -141,7 +164,14 @@ export default function StudentPlacementPage() {
                                 </div>
                                 <div className="flex md:flex-col justify-end gap-3 pt-4 md:pt-0">
                                     <Button variant="ghost" className="rounded-xl font-bold border border-slate-100">Details</Button>
-                                    <Button className="bg-indigo-600 hover:bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-indigo-100">Apply Now</Button>
+                                    <Button 
+                                        onClick={() => handleApply(job._id)}
+                                        disabled={applying === job._id || applications.some(a => a.jobId?._id === job._id)}
+                                        className="bg-indigo-600 hover:bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-indigo-100"
+                                    >
+                                        {applying === job._id ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+                                         applications.some(a => a.jobId?._id === job._id) ? "Applied" : "Apply Now"}
+                                    </Button>
                                 </div>
                             </Card>
                         )) : (

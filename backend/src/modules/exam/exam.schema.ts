@@ -70,6 +70,9 @@ export class MarkSheet {
 
     @Prop()
     percentage: number;
+
+    @Prop({ default: 0 })
+    gradePoints: number;
 }
 
 export const MarkSheetSchema = SchemaFactory.createForClass(MarkSheet);

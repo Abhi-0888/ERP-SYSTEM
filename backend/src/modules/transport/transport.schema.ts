@@ -58,3 +58,25 @@ export class Route {
 }
 
 export const RouteSchema = SchemaFactory.createForClass(Route);
+
+@Schema({ timestamps: true })
+export class TransportEnrollment {
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'StudentProfile', required: true })
+    studentId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Route', required: true })
+    routeId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ required: true })
+    pickupPoint: string;
+
+    @Prop({ default: 'Active', enum: ['Active', 'Pending', 'Cancelled'] })
+    status: string;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University', required: true })
+    universityId: MongooseSchema.Types.ObjectId;
+}
+
+export type TransportEnrollmentDocument = TransportEnrollment & Document;
+export const TransportEnrollmentSchema = SchemaFactory.createForClass(TransportEnrollment);
+TransportEnrollmentSchema.index({ studentId: 1, routeId: 1 }, { unique: true });

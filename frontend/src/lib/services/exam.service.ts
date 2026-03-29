@@ -7,6 +7,7 @@ export interface MarkSheet {
     examId: any;
     marksObtained: number;
     grade: string;
+    gradePoints: number;
     comments?: string;
     recordedBy: any;
 }

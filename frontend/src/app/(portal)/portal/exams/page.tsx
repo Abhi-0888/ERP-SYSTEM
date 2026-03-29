@@ -55,7 +55,7 @@ export default function StudentExamsPage() {
 
     const cgpa = results.length > 0 
         ? (results.reduce((acc, r) => acc + (parseFloat(r.gradePoints) || 0), 0) / results.length).toFixed(2)
-        : "N/A";
+        : "0.00";
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -67,7 +67,7 @@ export default function StudentExamsPage() {
                 <div className="bg-indigo-600 px-6 py-3 rounded-2xl text-white shadow-lg shadow-indigo-100 flex items-center gap-4">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Current CGPA</p>
-                        <p className="text-2xl font-black">{cgpa === "NaN" ? "8.60" : cgpa}</p>
+                        <p className="text-2xl font-black">{cgpa}</p>
                     </div>
                     <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                         <Award className="h-6 w-6" />

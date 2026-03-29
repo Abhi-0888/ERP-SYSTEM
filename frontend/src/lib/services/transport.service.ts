@@ -42,5 +42,15 @@ export const TransportService = {
     createRoute: async (data: any) => {
         const response = await api.post('/transport/routes', data);
         return response.data;
+    },
+
+    getStudentRoute: async (): Promise<any> => {
+        const response = await api.get('/transport/my-route');
+        return response.data;
+    },
+
+    applyForTransport: async (data: { routeId: string; pickupPoint: string }): Promise<any> => {
+        const response = await api.post('/transport/enroll', data);
+        return response.data;
     }
 };

@@ -12,30 +12,59 @@ import { Button } from "@/components/ui/button";
 
 export default function StudentTransportPage() {
     const [route, setRoute] = useState<any>(null);
+    const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [applying, setApplying] = useState(false);
+    const [selectedRoute, setSelectedRoute] = useState<string>("");
+    const [pickupPoint, setPickupPoint] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
 
-    useEffect(() => {
-        const fetchTransportData = async () => {
-            const userId = (user as any)?.id || (user as any)?._id;
-            if (!userId) return;
-            try {
-                // For now, listing all routes as individual student mapping might be in progress
-                const routes = await TransportService.getRoutes();
-                // If there's multiple routes, we just show the first one as representative or empty if none
-                const availableRoutes = Array.isArray(routes) ? routes : (routes as any).data || [];
-                setRoute(availableRoutes[0]); // Mocking first route as "Assigned"
-                setError(null);
-            } catch (err: any) {
-                console.error("Failed to fetch transport data", err);
-                setError("Failed to load transport records. Please try again later.");
-            } finally {
-                setLoading(false);
+    const fetchTransportData = async () => {
+        const userId = (user as any)?.id || (user as any)?._id;
+        if (!userId) return;
+        try {
+            const [enrollment, allRoutes] = await Promise.all([
+                TransportService.getStudentRoute(),
+                TransportService.getRoutes()
+            ]);
+            
+            if (enrollment && enrollment.routeId) {
+                setRoute(enrollment.routeId);
             }
-        };
+            setAvailableRoutes(allRoutes || []);
+            setError(null);
+        } catch (err: any) {
+            console.error("Failed to fetch transport data", err);
+            setError("Failed to load transport records. Please try again later.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchTransportData();
     }, [user]);
+
+    const handleApply = async () => {
+        if (!selectedRoute || !pickupPoint) {
+            alert("Please select a route and pickup point");
+            return;
+        }
+        setApplying(true);
+        try {
+            await TransportService.applyForTransport({
+                routeId: selectedRoute,
+                pickupPoint: pickupPoint
+            });
+            alert("Transport application submitted!");
+            fetchTransportData();
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to apply");
+        } finally {
+            setApplying(false);
+        }
+    };
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -162,17 +191,48 @@ export default function StudentTransportPage() {
                     </div>
                 </div>
             ) : (
-                <div className="py-24 bg-white border border-dashed border-slate-200 rounded-[3rem] text-center space-y-6">
+                <div className="py-24 bg-white border border-dashed border-slate-200 rounded-[3rem] text-center space-y-6 max-w-4xl mx-auto px-8">
                     <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
                         <Bus className="h-10 w-10 text-slate-300" />
                     </div>
                     <div className="max-w-md mx-auto">
                         <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">No Active Route</h2>
                         <p className="text-slate-500 font-medium mt-2">
-                            Institutional transport is currently only active for registered commuters. Apply for a transport pass in the management shell.
+                            Institutional transport is currently only active for registered commuters.
                         </p>
                     </div>
-                    <Button className="bg-indigo-600 font-bold rounded-xl px-10 h-12 shadow-xl shadow-indigo-100">Apply for Commute</Button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-400 uppercase">Select Route</label>
+                            <select 
+                                onChange={(e) => setSelectedRoute(e.target.value)}
+                                className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value="">Select a route...</option>
+                                {availableRoutes.map((r) => (
+                                    <option key={r._id} value={r._id}>{r.name} ({r.startPoint} - {r.endPoint})</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-400 uppercase">Pickup Point / Stop</label>
+                            <input 
+                                type="text"
+                                placeholder="Enter your stop..."
+                                onChange={(e) => setPickupPoint(e.target.value)}
+                                className="w-full h-12 rounded-xl border border-slate-200 px-4 bg-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+                    </div>
+
+                    <Button 
+                        onClick={handleApply}
+                        disabled={applying}
+                        className="bg-indigo-600 font-bold rounded-xl px-10 h-12 shadow-xl shadow-indigo-100"
+                    >
+                        {applying ? <Loader2 className="h-5 w-5 animate-spin" /> : "Apply for Commute"}
+                    </Button>
                 </div>
             )}
         </div>
