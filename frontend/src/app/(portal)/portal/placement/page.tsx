@@ -226,15 +226,15 @@ export default function StudentPlacementPage() {
                         <h4 className="text-xl font-black font-outfit tracking-tighter uppercase mb-6">Preparation Shell</h4>
                         <div className="space-y-4">
                             <div className="p-5 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors cursor-pointer border border-white/5 group">
-                                <p className="font-bold text-sm flex items-center gap-3">
+                                <div className="font-bold text-sm flex items-center gap-3">
                                     <div className="w-2 h-2 rounded-full bg-blue-500" /> Resume Builder
-                                </p>
+                                </div>
                                 <p className="text-[10px] text-slate-400 mt-2 font-medium">Generate AI-optimized portfolios.</p>
                             </div>
                             <div className="p-5 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors cursor-pointer border border-white/5 group">
-                                <p className="font-bold text-sm flex items-center gap-3">
+                                <div className="font-bold text-sm flex items-center gap-3">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500" /> Mock Interviews
-                                </p>
+                                </div>
                                 <p className="text-[10px] text-slate-400 mt-2 font-medium">Practice with departmental experts.</p>
                             </div>
                         </div>

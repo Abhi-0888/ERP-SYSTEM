@@ -37,36 +37,45 @@ export class AuthService {
     async login(username: string, password: string) {
         const user = await this.validateUser(username, password);
         if (!user) {
+            console.log(`[AuthDebug] Login FAILED for user: ${username}`);
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        const payload = {
-            username: user.username,
-            sub: user._id,
-            role: user.role,
-            universityId: user.universityId,
-        };
-
-        // Update last login
-        await this.userModel.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-
-        // Fetch university details
-        const university = await this.universityModel.findById(user.universityId).exec();
-
-        return {
-            access_token: this.jwtService.sign(payload),
-            user: {
-                id: user._id,
+        console.log(`[AuthDebug] Login SUCCESS for user: ${user.username}. Generating token...`);
+        try {
+            const payload = {
                 username: user.username,
-                name: user.name || user.username,
-                email: user.email,
-                phoneNumber: user.phoneNumber,
+                sub: user._id,
                 role: user.role,
                 universityId: user.universityId,
-                universityStatus: university?.status || 'active',
-                onboardingStage: university?.onboardingStage || 0
-            },
-        };
+            };
+    
+            // Update last login
+            await this.userModel.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+            console.log(`[AuthDebug] Last login updated for user: ${user._id}`);
+    
+            // Fetch university details
+            const university = await this.universityModel.findById(user.universityId).exec();
+            console.log(`[AuthDebug] University lookup for: ${user.universityId} -> ${university ? 'FOUND' : 'NULL'}`);
+    
+            return {
+                access_token: this.jwtService.sign(payload),
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    name: user.name || user.username,
+                    email: user.email,
+                    phoneNumber: user.phoneNumber,
+                    role: user.role,
+                    universityId: user.universityId,
+                    universityStatus: university?.status || 'active',
+                    onboardingStage: university?.onboardingStage || 0
+                },
+            };
+        } catch (error) {
+            console.error(`[AuthDebug] Error during login finalization: ${error.message}`);
+            throw error;
+        }
     }
 
     async impersonate(targetUserId: string) {

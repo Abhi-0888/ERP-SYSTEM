@@ -27,10 +27,11 @@ export default function StudentTimetablePage() {
                 setTimetable(res.data);
                 setError(null);
             } catch (err: any) {
-                console.error("Failed to fetch timetable", err);
                 if (err.response?.status === 404) {
+                    console.info("No published timetable found for student yet.");
                     setError("No published timetable found for your program and semester.");
                 } else {
+                    console.error("Failed to fetch timetable", err);
                     setError("Failed to load timetable. Please try again later.");
                 }
             } finally {
@@ -57,7 +58,7 @@ export default function StudentTimetablePage() {
         );
     }
 
-    const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700">
@@ -70,7 +71,7 @@ export default function StudentTimetablePage() {
 
             <div className="grid grid-cols-1 gap-8">
                 {days.map((day) => {
-                    const slots = timetable?.slots?.filter((s: any) => s.dayOfWeek === day) || [];
+                    const slots = timetable?.slots?.filter((s: any) => (s.day || s.dayOfWeek)?.toLowerCase() === day.toLowerCase()) || [];
                     if (slots.length === 0) return null;
 
                     return (

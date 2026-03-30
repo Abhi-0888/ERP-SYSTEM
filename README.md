@@ -102,6 +102,7 @@ Note: Only run seeding against development or isolated databases. For production
 
 ## 📖 Documentation
 
+- [System Blueprint (Detailed Architecture & Flows)](./BLUEPRINT.md)
 - [API Documentation](./API_DOCUMENTATION.md)
 - [Quick Start Guide](./QUICKSTART.md)
 

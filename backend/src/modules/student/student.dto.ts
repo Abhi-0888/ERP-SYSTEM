@@ -143,6 +143,10 @@ export class UpdateStudentDto {
     @IsString()
     @IsOptional()
     guardianPhoneNumber?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class UpdateStudentEnrollmentDto {
@@ -154,6 +158,14 @@ export class UpdateStudentEnrollmentDto {
 
     @IsOptional()
     semester?: number;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
+
+    @IsOptional()
+    @IsString({ each: true })
+    courseIds?: string[];
 }
 
 export class StudentFilterDto {

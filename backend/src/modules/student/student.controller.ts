@@ -132,7 +132,7 @@ export class StudentController {
         }
     }
 
-    @Post(':id/enrollment')
+    @Patch(':id/enrollment')
     @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
     async updateEnrollment(@Param('id') id: string, @Body() dto: UpdateStudentEnrollmentDto, @Request() req) {
         try {

@@ -72,17 +72,24 @@ export default function StudentPortalDashboard() {
         if (!(user as any)?.id) return;
         setLoading(true);
         try {
+            // Individual catches to ensure one failure doesn't block the whole dashboard
             const [examsRes, attendanceRes, timetableRes] = await Promise.all([
-                ExamService.getMarksByStudent((user as any).id),
-                AttendanceService.getStudentAttendance((user as any).id),
-                TimetableService.getTimetableForStudent((user as any).id)
+                ExamService.getMarksByStudent((user as any).id).catch(() => null),
+                AttendanceService.getStudentAttendance((user as any).id).catch(() => null),
+                TimetableService.getTimetableForStudent((user as any).id).catch(err => {
+                    if (err.response?.status === 404) {
+                        console.info("No timetable published for student yet.");
+                        return null;
+                    }
+                    throw err;
+                })
             ]);
 
             // Process schedule for UI
             const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long' });
             let todayClasses: Timetable['slots'] = [];
             if (timetableRes && Array.isArray(timetableRes.slots)) {
-                todayClasses = timetableRes.slots.filter((s) => s.day === todayStr);
+                todayClasses = timetableRes.slots.filter((s) => (s.day || (s as any).dayOfWeek)?.toLowerCase() === todayStr.toLowerCase());
             }
             setSchedule(todayClasses.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')));
 

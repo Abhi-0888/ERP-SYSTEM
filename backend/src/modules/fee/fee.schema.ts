@@ -5,14 +5,14 @@ export type FeeStructureDocument = FeeStructure & Document;
 
 @Schema({ timestamps: true })
 export class FeeStructure {
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Program', required: true })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Program' })
     programId: MongooseSchema.Types.ObjectId;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University', required: true })
     universityId: MongooseSchema.Types.ObjectId;
 
-    @Prop({ required: true })
-    year: number;
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'AcademicYear', required: true })
+    academicYearId: MongooseSchema.Types.ObjectId;
 
     @Prop({ required: true })
     name: string;

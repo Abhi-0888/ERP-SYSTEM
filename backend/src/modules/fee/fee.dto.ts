@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, MinLength, MaxLength, Min } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, MinLength, MaxLength, Min, IsNotEmpty, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum FeeType {
@@ -47,7 +47,7 @@ export class CreateFeeDto {
     @IsOptional()
     programId?: string;
 
-    @IsString()
+    @IsNotEmpty()
     @Type(() => Date)
     dueDate: Date;
 
@@ -63,6 +63,10 @@ export class CreateFeeDto {
     @IsEnum(FeeStatus)
     @IsOptional()
     status?: FeeStatus;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class UpdateFeeDto {
@@ -89,6 +93,10 @@ export class UpdateFeeDto {
     @IsString()
     @IsOptional()
     description?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class AssignFeeToStudentDto {
@@ -105,6 +113,10 @@ export class AssignFeeToStudentDto {
     @IsString()
     @IsOptional()
     remarks?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class RecordPaymentDto {
@@ -133,7 +145,8 @@ export class RecordPaymentDto {
 }
 
 export class BulkAssignFeeDto {
-    @IsString()
+    @IsArray()
+    @IsString({ each: true })
     studentIds: string[];
 
     @IsString()

@@ -60,6 +60,10 @@ export class UpdateAcademicYearDto {
 
     @IsOptional()
     isActive?: boolean;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class CreateDepartmentDto {
@@ -102,6 +106,10 @@ export class UpdateDepartmentDto {
     @IsString()
     @IsOptional()
     hodId?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class CreateProgramDto {
@@ -248,4 +256,8 @@ export class UpdateCourseDto {
     @IsString()
     @IsOptional()
     facultyId?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }

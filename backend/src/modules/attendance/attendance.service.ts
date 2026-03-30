@@ -141,7 +141,16 @@ export class AttendanceService {
             }
 
             if (!student) {
-                throw new NotFoundException('Student profile not found');
+                // Instead of 404, return a default empty response for better UX
+                return {
+                    studentId: null,
+                    totalClasses: 0,
+                    presentClasses: 0,
+                    absentClasses: 0,
+                    attendancePercentage: 0,
+                    records: [],
+                    message: 'No student profile found for this user.'
+                };
             }
 
             const query: any = { studentId: student._id };

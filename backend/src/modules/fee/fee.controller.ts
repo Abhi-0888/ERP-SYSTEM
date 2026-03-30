@@ -82,6 +82,12 @@ export class FeeController {
         }
     }
 
+    @Get('structures')
+    @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    async getFeeStructures(@Request() req, @Query() filter: FeeFilterDto) {
+        return this.findAllFees(req, filter.academicYearId, filter.type, filter.status, filter.search);
+    }
+
     @Get(':id')
     @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
     async getFee(@Param('id') id: string, @Request() req) {
