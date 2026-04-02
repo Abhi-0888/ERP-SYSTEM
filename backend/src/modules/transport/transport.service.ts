@@ -42,6 +42,12 @@ export class TransportService {
         return this.routeModel.find({ universityId, isActive: true }).populate('vehicleId').exec();
     }
 
+    async getRoute(id: string): Promise<Route> {
+        const route = await this.routeModel.findById(id).populate('vehicleId').exec();
+        if (!route) throw new NotFoundException('Route not found');
+        return route;
+    }
+
     async updateRoute(id: string, dto: UpdateRouteDto): Promise<Route> {
         const route = await this.routeModel.findByIdAndUpdate(id, dto, { new: true });
         if (!route) throw new NotFoundException('Route not found');

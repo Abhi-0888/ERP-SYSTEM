@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { envValidationSchema } from './common/config/env.schema';
 import { AuthModule } from './modules/auth/auth.module';
 import { UniversityModule } from './modules/university/university.module';
 import { UserModule } from './modules/user/user.module';
@@ -24,7 +26,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AiModule } from './modules/ai/ai.module';
 import { AppController } from './app.controller';
 
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { DataIsolationInterceptor } from './common/interceptors/data-isolation.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
@@ -33,7 +35,15 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: '.env',
+            validationSchema: envValidationSchema,
+            validationOptions: {
+                abortEarly: true,
+            },
         }),
+        ThrottlerModule.forRoot([{
+            ttl: 60000,
+            limit: 100,
+        }]),
         ScheduleModule.forRoot(),
         MongooseModule.forRoot(
             process.env.DATABASE_URL || 'mongodb://localhost:27017/university-erp',
@@ -61,6 +71,10 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     ],
     controllers: [AppController],
     providers: [
+        {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+        },
         {
             provide: APP_INTERCEPTOR,
             useClass: DataIsolationInterceptor,

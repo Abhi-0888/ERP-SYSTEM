@@ -46,6 +46,11 @@ export class TransportController {
         return this.transportService.findAllRoutes(req.user.universityId);
     }
 
+    @Get('routes/:id')
+    getRoute(@Param('id') id: string) {
+        return this.transportService.getRoute(id);
+    }
+
     @Patch('routes/:id')
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
     updateRoute(@Param('id') id: string, @Body() dto: UpdateRouteDto) {
@@ -71,6 +76,12 @@ export class TransportController {
     @Roles(Role.STUDENT)
     getStudentRoute(@Request() req) {
         return this.transportService.getStudentEnrollment(req.user.profileId || req.user.id);
+    }
+
+    @Get('student/:id')
+    @Roles(Role.TRANSPORT_MANAGER, Role.UNIVERSITY_ADMIN)
+    getStudentEnrollmentAdmin(@Param('id') id: string) {
+        return this.transportService.getStudentEnrollment(id);
     }
 
     @Patch('enrollment/:id/status')

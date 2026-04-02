@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User, UserDocument } from '../user/user.schema';
 import { University, UniversityDocument } from '../university/university.schema';
 
@@ -104,6 +105,46 @@ export class AuthService {
                 universityId: user.universityId,
             },
         };
+    }
+
+    async forgotPassword(email: string) {
+        const user = await this.userModel.findOne({ email, isActive: true });
+        if (!user) {
+            return { message: 'If an account with that email exists, a reset link has been sent.' };
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date();
+        expires.setHours(expires.getHours() + 1);
+
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = expires;
+        await user.save();
+
+        console.log(`[AuthDebug] Reset token for ${email}: ${token}`);
+        console.log(`[AuthDebug] Reset URL: http://localhost:3000/reset-password?token=${token}`);
+
+        return { message: 'If an account with that email exists, a reset link has been sent.' };
+    }
+
+    async resetPassword(token: string, newPassword: string) {
+        const user = await this.userModel.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: new Date() },
+            isActive: true
+        });
+
+        if (!user) {
+            throw new BadRequestException('Invalid or expired password reset token');
+        }
+
+        user.password = await this.hashPassword(newPassword);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        user.mustChangePassword = false;
+        await user.save();
+
+        return { message: 'Password has been successfully reset' };
     }
 
     async hashPassword(password: string): Promise<string> {

@@ -1,6 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Param, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from './auth.dto';
+import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from './auth.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -14,6 +14,18 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto.username, loginDto.password);
+    }
+
+    @Post('forgot-password')
+    @HttpCode(HttpStatus.OK)
+    async forgotPassword(@Body() dto: ForgotPasswordDto) {
+        return this.authService.forgotPassword(dto.email);
+    }
+
+    @Post('reset-password')
+    @HttpCode(HttpStatus.OK)
+    async resetPassword(@Body() dto: ResetPasswordDto) {
+        return this.authService.resetPassword(dto.token, dto.newPassword);
     }
 
     @Post('impersonate/:userId')
