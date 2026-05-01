@@ -34,7 +34,13 @@ export default function LoginPage() {
         }
       }
 
-      router.push("/dashboard");
+      // Route to the correct workspace based on role
+      const storedRole = localStorage.getItem("educore_role");
+      const { ROLE_WORKSPACE } = await import("@/lib/navigation");
+      const target = storedRole && ROLE_WORKSPACE[storedRole as keyof typeof ROLE_WORKSPACE]
+        ? ROLE_WORKSPACE[storedRole as keyof typeof ROLE_WORKSPACE]
+        : "/dashboard";
+      router.push(target);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -43,15 +49,20 @@ export default function LoginPage() {
   };
 
   const demoAccounts = [
-    { email: "superadmin@eduncore.com", role: "Super Admin" },
-    { email: "admin@git.edu", role: "Uni Admin" },
-    { email: "faculty_pro@git.edu", role: "Faculty" },
-    { email: "alice@git.edu", role: "Student" },
+    { email: "superadmin", role: "Super Admin" },
+    { email: "admin_srmap", role: "Uni Admin" },
+    { email: "registrar", role: "Registrar" },
+    { email: "hod_cse", role: "HOD" },
+    { email: "faculty_cse1", role: "Faculty" },
+    { email: "student_cse1", role: "Student" },
+    { email: "finance_head", role: "Finance" },
+    { email: "accountant", role: "Accountant" },
+    { email: "librarian", role: "Librarian" },
   ];
 
   const handleDemoLogin = (demoEmail: string) => {
     setEmail(demoEmail);
-    setPassword("password123");
+    setPassword("Password@123");
   };
 
   return (
@@ -146,7 +157,7 @@ export default function LoginPage() {
 
               {/* Demo Accounts */}
               <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-slate-500 text-center mb-3">Demo Accounts (Password: password123)</p>
+                <p className="text-sm text-slate-500 text-center mb-3">Demo Accounts (Password: Password@123)</p>
                 <div className="grid grid-cols-3 gap-2">
                   {demoAccounts.map((account) => (
                     <Button

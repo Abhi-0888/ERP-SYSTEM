@@ -54,7 +54,7 @@ export class StudentController {
     }
 
     @Get()
-    @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD, Role.FACULTY)
+    @Roles(Role.SUPER_ADMIN, Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.HOD, Role.FACULTY, Role.FINANCE, Role.ACCOUNTANT, Role.EXAM_CONTROLLER)
     async findAll(
         @Request() req,
         @Query('page') page: number = 1,

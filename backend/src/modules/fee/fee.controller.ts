@@ -28,7 +28,7 @@ export class FeeController {
     // ============= FEE STRUCTURE ENDPOINTS =============
 
     @Post()
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN)
     async createFeeStructure(@Body() dto: CreateFeeDto, @Request() req) {
         try {
             return await this.feeService.createFeeStructure(dto, req.user);
@@ -41,7 +41,7 @@ export class FeeController {
     }
 
     @Get()
-    @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async findAllFees(
         @Request() req,
         @Query('academicYearId') academicYearId?: string,
@@ -70,7 +70,7 @@ export class FeeController {
     // ============= REPORTS =============
 
     @Get('reports/summary')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN)
     async generateReport(@Query('academicYearId') academicYearId?: string) {
         try {
             return await this.feeService.generateFeeReport(academicYearId);
@@ -83,13 +83,34 @@ export class FeeController {
     }
 
     @Get('structures')
-    @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
-    async getFeeStructures(@Request() req, @Query() filter: FeeFilterDto) {
-        return this.findAllFees(req, filter.academicYearId, filter.type, filter.status, filter.search);
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    async getFeeStructures(
+        @Request() req,
+        @Query('academicYearId') academicYearId?: string,
+        @Query('type') type?: string,
+        @Query('status') status?: string,
+        @Query('search') search?: string,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10,
+    ) {
+        try {
+            const filter: FeeFilterDto = {
+                academicYearId,
+                type: type as FeeType,
+                status: status as FeeStatus,
+                search
+            };
+            return await this.feeService.findAllFees(req.user, filter, page, limit);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to fetch fee structures',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
     }
 
     @Get(':id')
-    @Roles(Role.ACCOUNTANT, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
     async getFee(@Param('id') id: string, @Request() req) {
         try {
             return await this.feeService.findFeeById(id, req.user);
@@ -102,7 +123,7 @@ export class FeeController {
     }
 
     @Patch(':id')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN)
     async updateFee(@Param('id') id: string, @Body() dto: UpdateFeeDto, @Request() req) {
         try {
             return await this.feeService.updateFee(id, dto, req.user);
@@ -115,7 +136,7 @@ export class FeeController {
     }
 
     @Delete(':id')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN)
     async deleteFee(@Param('id') id: string, @Request() req) {
         try {
             return await this.feeService.deleteFee(id, req.user);
@@ -130,7 +151,7 @@ export class FeeController {
     // ============= STUDENT FEE ENDPOINTS =============
 
     @Post('assign')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN)
     async assignFee(@Body() dto: AssignFeeToStudentDto, @Request() req) {
         try {
             return await this.feeService.assignFeeToStudent(dto, req.user);
@@ -143,7 +164,7 @@ export class FeeController {
     }
 
     @Post('payment')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN, Role.STUDENT)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN, Role.STUDENT)
     async recordPayment(@Body() dto: RecordPaymentDto, @Request() req) {
         try {
             return await this.feeService.recordPayment(dto, req.user);
@@ -156,7 +177,7 @@ export class FeeController {
     }
 
     @Get('student/:studentId')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN, Role.STUDENT, Role.REGISTRAR)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN, Role.STUDENT, Role.REGISTRAR)
     async getStudentFees(@Param('studentId') studentId: string, @Request() req) {
         try {
             return await this.feeService.getStudentFees(studentId, req.user);
@@ -169,7 +190,7 @@ export class FeeController {
     }
 
     @Get('student/:studentId/status')
-    @Roles(Role.ACCOUNTANT, Role.UNIVERSITY_ADMIN, Role.STUDENT, Role.REGISTRAR)
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN, Role.STUDENT, Role.REGISTRAR)
     async getStudentFeeStatus(@Param('studentId') studentId: string, @Request() req) {
         return this.getStudentFees(studentId, req);
     }

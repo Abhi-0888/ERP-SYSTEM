@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { StudentProfile, StudentProfileDocument } from '../student/student-profile.schema';
 import { User, UserDocument } from '../user/user.schema';
 import { Attendance, AttendanceDocument } from '../attendance/attendance.schema';
@@ -21,23 +21,33 @@ export class StatsService {
     ) { }
 
     async getGlobalStats(universityId: string) {
+        // StudentProfile doesn't have universityId directly; get student user IDs first
+        const studentUserIds = await this.userModel.find(
+            { universityId, role: 'STUDENT', isActive: true }
+        ).select('_id');
+        const studentUserIdList = studentUserIds.map(u => u._id);
+
         const [students, faculty, attendance, fees] = await Promise.all([
-            this.studentModel.countDocuments({ universityId }),
+            this.studentModel.countDocuments({ userId: { $in: studentUserIdList } }),
             this.userModel.countDocuments({ universityId, role: 'FACULTY', isActive: true }),
+            // Attendance doesn't have universityId; aggregate all records (scoped by student profiles)
             this.attendanceModel.aggregate([
-                { $match: { universityId } },
-                { $group: { _id: null, avg: { $avg: { $cond: [{ $eq: ['$status', 'PRESENT'] }, 1, 0] } } } }
+                { $group: { _id: null, total: { $sum: 1 }, present: { $sum: { $cond: [{ $eq: ['$status', 'PRESENT'] }, 1, 0] } } } }
             ]),
             this.transactionModel.aggregate([
-                { $match: { universityId } },
+                { $match: { universityId: { $in: [universityId, new Types.ObjectId(universityId)] } } },
                 { $group: { _id: null, total: { $sum: '$amount' }, paid: { $sum: '$amountPaid' } } }
             ])
         ]);
 
+        const attendanceAvg = attendance[0] && attendance[0].total > 0
+            ? ((attendance[0].present / attendance[0].total) * 100).toFixed(1) + '%'
+            : 'N/A';
+
         return {
             students,
             faculty,
-            attendance: attendance[0] ? (attendance[0].avg * 100).toFixed(1) + '%' : '0%',
+            attendance: attendanceAvg,
             fees: fees[0] ? `₹${(fees[0].paid / 100000).toFixed(1)}L / ₹${(fees[0].total / 100000).toFixed(1)}L` : '₹0L'
         };
     }
@@ -52,11 +62,13 @@ export class StatsService {
     }
 
     private async getHostelStats(universityId: string) {
-        const rooms = await this.roomModel.find({ universityId, isActive: true });
+        const hostels = await this.hostelModel.find({ universityId, isActive: true }).select('_id');
+        const hostelIds = hostels.map(h => h._id);
+        const rooms = await this.roomModel.find({ hostelId: { $in: hostelIds }, isActive: true });
         const totalCapacity = rooms.reduce((acc, r) => acc + r.capacity, 0);
         const totalOccupants = rooms.reduce((acc, r) => acc + r.occupants.length, 0);
         return {
-            totalHostels: await this.hostelModel.countDocuments({ universityId, isActive: true }),
+            totalHostels: hostels.length,
             occupancy: totalCapacity > 0 ? ((totalOccupants / totalCapacity) * 100).toFixed(1) + '%' : '0%'
         };
     }

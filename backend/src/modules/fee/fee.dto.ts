@@ -121,6 +121,10 @@ export class AssignFeeToStudentDto {
 
 export class RecordPaymentDto {
     @IsString()
+    @IsOptional()
+    studentId?: string;
+
+    @IsString()
     feeId: string;
 
     @IsNumber()

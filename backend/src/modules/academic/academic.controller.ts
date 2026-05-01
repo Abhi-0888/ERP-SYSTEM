@@ -42,7 +42,7 @@ export class AcademicController {
     }
 
     @Get('academic-years')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async findAllAcademicYears(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
@@ -58,7 +58,7 @@ export class AcademicController {
     }
 
     @Get('academic-years/active')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async getActiveAcademicYear() {
         try {
             return await this.academicService.getActiveAcademicYear();
@@ -71,7 +71,7 @@ export class AcademicController {
     }
 
     @Get('academic-years/:id')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async getAcademicYear(@Param('id') id: string) {
         try {
             return await this.academicService.findAcademicYearById(id);
@@ -125,7 +125,7 @@ export class AcademicController {
     }
 
     @Get('departments')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async findAllDepartments(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
@@ -142,7 +142,7 @@ export class AcademicController {
     }
 
     @Get('departments/:id')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async getDepartment(@Param('id') id: string, @Request() req) {
         try {
             return await this.academicService.findDepartmentById(id, req.user);
@@ -196,7 +196,7 @@ export class AcademicController {
     }
 
     @Get('programs')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async findAllPrograms(
         @Request() req,
         @Query('departmentId') departmentId?: string,
@@ -214,7 +214,7 @@ export class AcademicController {
     }
 
     @Get('programs/:id')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async getProgram(@Param('id') id: string, @Request() req) {
         try {
             return await this.academicService.findProgramById(id, req.user);
@@ -268,7 +268,7 @@ export class AcademicController {
     }
 
     @Get('courses')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async findAllCourses(
         @Request() req,
         @Query('programId') programId?: string,
@@ -287,7 +287,7 @@ export class AcademicController {
     }
 
     @Get('courses/program/:programId')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async getCoursesByProgram(@Param('programId') programId: string, @Request() req) {
         try {
             return await this.academicService.getCoursesByProgram(programId, req.user);
@@ -300,7 +300,7 @@ export class AcademicController {
     }
 
     @Get('courses/:id')
-    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    @Roles(Role.STUDENT, Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.EXAM_CONTROLLER, Role.ACADEMIC_COORDINATOR)
     async getCourse(@Param('id') id: string, @Request() req) {
         try {
             return await this.academicService.findCourseById(id, req.user);

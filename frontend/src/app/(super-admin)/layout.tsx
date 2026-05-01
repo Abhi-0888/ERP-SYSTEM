@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export default function SuperAdminLayout({
@@ -77,5 +78,3 @@ export default function SuperAdminLayout({
         </div>
     );
 }
-
-import { Badge } from "@/components/ui/badge";

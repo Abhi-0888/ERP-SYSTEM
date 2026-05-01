@@ -168,7 +168,7 @@ export class TimetableController {
     // ============= INSTRUCTOR TIMETABLE =============
 
     @Get('instructor/:instructorId')
-    @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR)
+    @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.ACADEMIC_COORDINATOR)
     async getInstructorTimetable(@Param('instructorId') instructorId: string) {
         try {
             return await this.timetableService.getInstructorTimetable(instructorId);

@@ -8,6 +8,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";
 import { cn } from "@/lib/utils";
 import { SHELL_CONFIG } from "@/lib/navigation";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function ModuleLayout({
@@ -81,5 +82,3 @@ export default function ModuleLayout({
         </div>
     );
 }
-
-import { Badge } from "@/components/ui/badge";

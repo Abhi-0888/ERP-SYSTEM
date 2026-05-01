@@ -108,26 +108,79 @@ export class FeeService {
 
     async assignFeeToStudent(dto: AssignFeeToStudentDto, currentUser: any): Promise<any> {
         try {
-            await this.findFeeById(dto.feeId, currentUser);
-            
-            // Logic to assign fee to student...
-            // Usually this means creating a Transaction or updating StudentProfile
-            return { message: 'Fee assigned successfully' };
+            const fee = await this.findFeeById(dto.feeId, currentUser);
+
+            // Check if already assigned
+            const existing = await this.transactionModel.findOne({
+                studentId: dto.studentId,
+                feeId: dto.feeId,
+            });
+            if (existing) {
+                throw new BadRequestException('Fee already assigned to this student');
+            }
+
+            const transaction = new this.transactionModel({
+                studentId: dto.studentId,
+                feeId: dto.feeId,
+                amount: dto.customAmount || fee.amount,
+                amountPaid: 0,
+                status: 'PENDING',
+                dueDate: fee.dueDate,
+                universityId: currentUser.universityId,
+                remarks: dto.remarks || `Fee assigned: ${fee.name}`,
+            });
+            const saved = await transaction.save();
+
+            return {
+                message: 'Fee assigned successfully',
+                transaction: saved,
+            };
         } catch (error) {
             throw error;
         }
     }
 
-    async recordPayment(dto: RecordPaymentDto, currentUser: any): Promise<Transaction> {
+    async recordPayment(dto: RecordPaymentDto, currentUser: any): Promise<any> {
         try {
-            // Isolation check for student/fee could be added here
+            // Find existing pending transaction for this fee
+            const existing = await this.transactionModel.findOne({
+                feeId: dto.feeId,
+                ...(dto['studentId'] ? { studentId: dto['studentId'] } : {}),
+            });
+
+            if (existing) {
+                // Update existing transaction
+                existing.amountPaid = (existing.amountPaid || 0) + dto.amountPaid;
+                existing.paymentMethod = dto.paymentMethod;
+                existing.paymentDate = new Date();
+                existing.transactionId = dto.transactionId || `TXN-${Date.now()}`;
+                existing.remarks = dto.remarks || existing.remarks;
+                existing.processedBy = currentUser.userId || currentUser._id;
+
+                if (existing.amountPaid >= existing.amount) {
+                    existing.status = 'FULLY_PAID';
+                } else {
+                    existing.status = 'PARTIALLY_PAID';
+                }
+                existing.lastPaymentDate = new Date();
+                const saved = await existing.save();
+                return {
+                    message: existing.amountPaid >= existing.amount ? 'Payment completed' : 'Partial payment recorded',
+                    transaction: saved,
+                };
+            }
+
+            // Create new transaction if none exists
             const transaction = new this.transactionModel({
                 ...dto,
                 universityId: currentUser.universityId,
                 paymentDate: new Date(),
+                transactionId: dto.transactionId || `TXN-${Date.now()}`,
                 status: 'COMPLETED',
+                processedBy: currentUser.userId || currentUser._id,
             });
-            return await transaction.save();
+            const saved = await transaction.save();
+            return { message: 'Payment recorded', transaction: saved };
         } catch (error) {
             throw error;
         }

@@ -77,6 +77,9 @@ export class Transaction {
 
     @Prop()
     remarks: string;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University' })
+    universityId: MongooseSchema.Types.ObjectId;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

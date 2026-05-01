@@ -7,14 +7,28 @@ import api from "@/lib/api";
 import { roleDisplayNames } from "@/lib/navigation";
 import { StatsService } from "@/lib/services/stats.service";
 import { ExamService } from "@/lib/services/exam.service";
+import { StudentService } from "@/lib/services/student.service";
+import { AcademicService } from "@/lib/services/academic.service";
+import { SectionService } from "@/lib/services/section.service";
+import { LeaveService } from "@/lib/services/leave.service";
+import { FeeService } from "@/lib/services/fee.service";
+import { HostelService } from "@/lib/services/hostel.service";
+import { LibraryService } from "@/lib/services/library.service";
+import { AttendanceService } from "@/lib/services/attendance.service";
+import { TimetableService } from "@/lib/services/timetable.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
 import {
     Users, GraduationCap, BookOpen, Building2, TrendingUp, TrendingDown,
     Calendar, AlertCircle, CreditCard, ClipboardList, BarChart3,
     ArrowRight, Download, Filter, Clock, MapPin, Loader2, Sparkles, Award,
-    FileText, Shield, Home, Bus, Library, Briefcase, UserCheck
+    FileText, Shield, Home, Bus, Library, Briefcase, UserCheck,
+    Plus, Search, Eye, CheckCircle, XCircle, Settings, School, User as UserIcon,
+    Activity, Wallet, Bell, UserCircle, TrendingUp as TrendingUpIcon
 } from "lucide-react";
 
 // ─── STAT CARD ───────────────────────────────────────────────────────────────────
@@ -206,6 +220,253 @@ function AdminDashboard() {
                     </Card>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ─── HOD DASHBOARD ────────────────────────────────────────────────────────────────
+
+function HODDashboard() {
+    const { user } = useAuth();
+    const router = useRouter();
+    const [activeTab, setActiveTab] = useState("overview");
+    const [stats, setStats] = useState({
+        faculty: 0, students: 0, courses: 0, sections: 0,
+        attendance: "0%", pendingLeaves: 0
+    });
+    const [loading, setLoading] = useState(true);
+    const [department, setDepartment] = useState<any>(null);
+    const [faculty, setFaculty] = useState<any[]>([]);
+    const [sections, setSections] = useState<any[]>([]);
+    const [courses, setCourses] = useState<any[]>([]);
+    const [leaves, setLeaves] = useState<any[]>([]);
+
+    useEffect(() => {
+        fetchHODData();
+    }, []);
+
+    const fetchHODData = async () => {
+        if (!user?.departmentId) return;
+        setLoading(true);
+        try {
+            const [deptRes, facultyRes, sectionsRes, coursesRes, leavesRes] = await Promise.all([
+                api.get(`/academic/departments/${user.departmentId}`),
+                api.get(`/users?departmentId=${user.departmentId}&role=FACULTY`),
+                SectionService.getAll({ departmentId: user.departmentId }),
+                AcademicService.getCourses({ departmentId: user.departmentId }),
+                LeaveService.getPending()
+            ]);
+
+            setDepartment(deptRes.data);
+            setFaculty(facultyRes.data?.data || []);
+            setSections((Array.isArray(sectionsRes) ? sectionsRes : []) as any[]);
+            setCourses((coursesRes.data || []) as any[]);
+            
+            const deptLeaves = Array.isArray(leavesRes) 
+                ? leavesRes.filter((l: any) => l.departmentId?.toString() === user.departmentId)
+                : [];
+            setLeaves(deptLeaves as any[]);
+
+            setStats({
+                faculty: facultyRes.data?.data?.length || 0,
+                students: sectionsRes.reduce((acc: number, s: any) => acc + (s.currentStrength || 0), 0),
+                courses: coursesRes.data?.length || 0,
+                sections: Array.isArray(sectionsRes) ? sectionsRes.length : 0,
+                attendance: "92%",
+                pendingLeaves: deptLeaves.length
+            });
+        } catch (error) {
+            console.error("Failed to fetch HOD data", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleApproveLeave = async (leaveId: string) => {
+        try {
+            await LeaveService.approve(leaveId);
+            toast.success("Leave approved");
+            fetchHODData();
+        } catch (error) {
+            toast.error("Failed to approve leave");
+        }
+    };
+
+    const handleRejectLeave = async (leaveId: string) => {
+        try {
+            await LeaveService.reject(leaveId, "Rejected by HOD");
+            toast.success("Leave rejected");
+            fetchHODData();
+        } catch (error) {
+            toast.error("Failed to reject leave");
+        }
+    };
+
+    if (loading) return (
+        <div className="p-20 text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+            <p className="text-slate-500 mt-4">Loading Department Dashboard...</p>
+        </div>
+    );
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900">HOD Dashboard</h1>
+                    <p className="text-slate-500 mt-1">{department?.name || 'Department'}</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => router.push('/dashboard/faculty')}>
+                        <Users className="h-4 w-4 mr-2" />Faculty
+                    </Button>
+                    <Button onClick={() => router.push('/dashboard/sections')}>
+                        <School className="h-4 w-4 mr-2" />Sections
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard title="Faculty" value={stats.faculty.toString()} change="Dept Staff" changeType="neutral" icon={Users} />
+                <StatCard title="Students" value={stats.students.toString()} change="Enrolled" changeType="positive" icon={GraduationCap} />
+                <StatCard title="Courses" value={stats.courses.toString()} change="Active" changeType="neutral" icon={BookOpen} />
+                <StatCard title="Sections" value={stats.sections.toString()} change="Classes" changeType="neutral" icon={School} />
+            </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-3 lg:w-fit">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="faculty">Faculty</TabsTrigger>
+                    <TabsTrigger value="leaves">Leave Requests</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="overview" className="space-y-4">
+                    <div className="grid lg:grid-cols-2 gap-4">
+                        <Card>
+                            <CardHeader><CardTitle>Department Sections</CardTitle></CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Section</TableHead>
+                                            <TableHead>Program</TableHead>
+                                            <TableHead>Students</TableHead>
+                                            <TableHead>Advisor</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {sections.map((section: any) => (
+                                            <TableRow key={section._id}>
+                                                <TableCell className="font-medium">{section.name}</TableCell>
+                                                <TableCell>{section.programId?.code}</TableCell>
+                                                <TableCell>{section.currentStrength}/{section.maxStrength}</TableCell>
+                                                <TableCell>{section.classAdvisorId?.name || 'Not Assigned'}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader><CardTitle>Courses Offered</CardTitle></CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    {courses.slice(0, 8).map((course: any) => (
+                                        <div key={course._id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                                            <div>
+                                                <p className="font-medium text-sm">{course.name}</p>
+                                                <p className="text-xs text-slate-500">{course.code} • Sem {course.semester}</p>
+                                            </div>
+                                            <Badge variant="outline">{course.credits} Credits</Badge>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="faculty">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>Department Faculty</CardTitle>
+                            <Button size="sm" onClick={() => router.push('/dashboard/faculty')}>
+                                <Plus className="h-4 w-4 mr-1" />Add Faculty
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {faculty.map((fac: any) => (
+                                        <TableRow key={fac._id}>
+                                            <TableCell className="font-medium">{fac.name}</TableCell>
+                                            <TableCell>{fac.email}</TableCell>
+                                            <TableCell>
+                                                <Badge className={fac.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700"}>
+                                                    {fac.isActive ? "Active" : "Inactive"}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/users/${fac._id}`)}>
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="leaves">
+                    <Card>
+                        <CardHeader><CardTitle>Pending Leave Requests</CardTitle></CardHeader>
+                        <CardContent>
+                            {leaves.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                                    <p className="text-slate-500">No pending leave requests</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {leaves.map((leave: any) => (
+                                        <div key={leave._id} className="flex items-center justify-between p-4 border rounded-lg">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                                                    <UserCircle className="h-5 w-5 text-amber-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">{leave.userId?.name}</p>
+                                                    <p className="text-sm text-slate-500">{leave.leaveType} • {leave.totalDays} days</p>
+                                                    <p className="text-xs text-slate-400">{new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleRejectLeave(leave._id)}>
+                                                    <XCircle className="h-4 w-4 mr-1" />Reject
+                                                </Button>
+                                                <Button size="sm" className="bg-green-600" onClick={() => handleApproveLeave(leave._id)}>
+                                                    <CheckCircle className="h-4 w-4 mr-1" />Approve
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
@@ -970,7 +1231,7 @@ export default function DashboardPage() {
         case "PRINCIPAL":
             return <AdminDashboard />;
         case "HOD":
-            return <AdminDashboard />;
+            return <HODDashboard />;
         case "REGISTRAR":
             return <RegistrarDashboard />;
         case "EXAM_CONTROLLER":
