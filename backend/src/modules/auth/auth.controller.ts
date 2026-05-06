@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Param, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from './auth.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -12,6 +13,8 @@ export class AuthController {
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
+    @UseGuards(ThrottlerGuard)
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto.username, loginDto.password);
     }

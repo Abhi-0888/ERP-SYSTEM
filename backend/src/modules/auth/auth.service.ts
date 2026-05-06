@@ -16,33 +16,25 @@ export class AuthService {
     ) { }
 
     async validateUser(username: string, password: string): Promise<any> {
-        console.log(`[AuthDebug] Validating user: ${username}`);
         const user = await this.userModel.findOne({
             $or: [{ username }, { email: username }],
             isActive: true
         });
 
-        console.log(`[AuthDebug] User found in DB: ${user ? user.username : 'NULL'}`);
-        if (user) console.log(`[AuthDebug] Stored Hash: ${user.password.substring(0, 10)}...`);
-
         if (user && await bcrypt.compare(password, user.password)) {
-            console.log(`[AuthDebug] Password MATCH`);
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { password, ...result } = user.toObject();
             return result;
         }
-        console.log(`[AuthDebug] Password MISMATCH or User NULL`);
         return null;
     }
 
     async login(username: string, password: string) {
         const user = await this.validateUser(username, password);
         if (!user) {
-            console.log(`[AuthDebug] Login FAILED for user: ${username}`);
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        console.log(`[AuthDebug] Login SUCCESS for user: ${user.username}. Generating token...`);
         try {
             const payload = {
                 username: user.username,
@@ -53,11 +45,9 @@ export class AuthService {
     
             // Update last login
             await this.userModel.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-            console.log(`[AuthDebug] Last login updated for user: ${user._id}`);
     
             // Fetch university details
             const university = await this.universityModel.findById(user.universityId).exec();
-            console.log(`[AuthDebug] University lookup for: ${user.universityId} -> ${university ? 'FOUND' : 'NULL'}`);
     
             return {
                 access_token: this.jwtService.sign(payload),
@@ -74,7 +64,6 @@ export class AuthService {
                 },
             };
         } catch (error) {
-            console.error(`[AuthDebug] Error during login finalization: ${error.message}`);
             throw error;
         }
     }
@@ -121,13 +110,30 @@ export class AuthService {
         user.resetPasswordExpires = expires;
         await user.save();
 
-        console.log(`[AuthDebug] Reset token for ${email}: ${token}`);
-        console.log(`[AuthDebug] Reset URL: http://localhost:3000/reset-password?token=${token}`);
-
         return { message: 'If an account with that email exists, a reset link has been sent.' };
     }
 
+    private validatePasswordStrength(password: string): void {
+        if (!password || password.length < 8) {
+            throw new BadRequestException('Password must be at least 8 characters long');
+        }
+        if (!/[A-Z]/.test(password)) {
+            throw new BadRequestException('Password must contain at least one uppercase letter');
+        }
+        if (!/[a-z]/.test(password)) {
+            throw new BadRequestException('Password must contain at least one lowercase letter');
+        }
+        if (!/[0-9]/.test(password)) {
+            throw new BadRequestException('Password must contain at least one number');
+        }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+            throw new BadRequestException('Password must contain at least one special character');
+        }
+    }
+
     async resetPassword(token: string, newPassword: string) {
+        this.validatePasswordStrength(newPassword);
+
         const user = await this.userModel.findOne({
             resetPasswordToken: token,
             resetPasswordExpires: { $gt: new Date() },

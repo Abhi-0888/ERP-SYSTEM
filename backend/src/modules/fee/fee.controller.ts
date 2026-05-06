@@ -195,5 +195,39 @@ export class FeeController {
         return this.getStudentFees(studentId, req);
     }
 
+    @Get('transactions')
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
+    async getTransactions(
+        @Request() req,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 20,
+    ) {
+        try {
+            // Test with empty filter first
+            const filter = {};
+            return await this.feeService.getTransactions(filter, page, limit);
+        } catch (error) {
+            throw new HttpException(
+                `Failed to fetch transactions: ${error.message}`,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+    @Get('transactions/test')
+    @Roles(Role.SUPER_ADMIN)
+    async testTransactions() {
+        try {
+            // Simple test to verify Transaction model works
+            const count = await this.feeService.transactionModel.countDocuments({});
+            return { message: 'Transaction model works', count };
+        } catch (error) {
+            throw new HttpException(
+                `Transaction model error: ${error.message}`,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
 
 }

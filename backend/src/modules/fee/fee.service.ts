@@ -9,7 +9,7 @@ import { Role } from '../../common/enums/role.enum';
 export class FeeService {
     constructor(
         @InjectModel(FeeStructure.name) private feeStructureModel: Model<FeeStructureDocument>,
-        @InjectModel(Transaction.name) private transactionModel: Model<TransactionDocument>,
+        @InjectModel(Transaction.name) public transactionModel: Model<TransactionDocument>,
     ) { }
 
     async createFeeStructure(dto: CreateFeeDto, currentUser: any): Promise<FeeStructure> {
@@ -221,6 +221,31 @@ export class FeeService {
             return { stats, timestamp: new Date() };
         } catch (error) {
             throw error;
+        }
+    }
+
+    async getTransactions(filter: any, page: number = 1, limit: number = 20): Promise<any> {
+        try {
+            const skip = (page - 1) * limit;
+            
+            // First try without populate to isolate the issue
+            const [transactions, total] = await Promise.all([
+                this.transactionModel.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).exec(),
+                this.transactionModel.countDocuments(filter),
+            ]);
+            
+            return {
+                data: transactions,
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                },
+            };
+        } catch (error) {
+            console.error('Error in getTransactions:', error);
+            throw new Error(`Failed to fetch transactions: ${error.message}`);
         }
     }
 }
