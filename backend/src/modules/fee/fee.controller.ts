@@ -203,9 +203,16 @@ export class FeeController {
         @Query('limit') limit: number = 20,
     ) {
         try {
-            // Test with empty filter first
-            const filter = {};
-            return await this.feeService.getTransactions(filter, page, limit);
+            // Return hardcoded response to isolate the issue
+            return {
+                data: [],
+                pagination: {
+                    total: 0,
+                    page,
+                    limit,
+                    totalPages: 0,
+                },
+            };
         } catch (error) {
             throw new HttpException(
                 `Failed to fetch transactions: ${error.message}`,
@@ -224,6 +231,27 @@ export class FeeController {
         } catch (error) {
             throw new HttpException(
                 `Transaction model error: ${error.message}`,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+    @Get('transactions/collection-check')
+    @Roles(Role.SUPER_ADMIN)
+    async checkTransactionCollection() {
+        try {
+            // Check if Transaction collection exists
+            const collections = await this.feeService.transactionModel.db.db.listCollections();
+            const collectionsArray = await collections.toArray();
+            const hasTransactions = collectionsArray.some((col) => col.name === 'transactions');
+            return { 
+                message: 'Collection check',
+                hasTransactions,
+                collections: collectionsArray.map(c => c.name)
+            };
+        } catch (error) {
+            throw new HttpException(
+                `Collection check error: ${error.message}`,
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }

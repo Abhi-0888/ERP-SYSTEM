@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, MinLength, MaxLength, Min, IsNotEmpty, IsArray } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, MinLength, MaxLength, Min, Max, IsNotEmpty, IsArray, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum FeeType {
@@ -31,20 +31,24 @@ export class CreateFeeDto {
     @IsString()
     @MinLength(3)
     @MaxLength(100)
+    @Matches(/^[a-zA-Z0-9\s\-]+$/, { message: 'Name can only contain letters, numbers, spaces, and hyphens' })
     name: string;
 
     @IsEnum(FeeType)
     type: FeeType;
 
     @IsNumber()
-    @Min(0)
+    @Min(1)
+    @Max(1000000)
     amount: number;
 
     @IsString()
+    @IsNotEmpty()
     academicYearId: string;
 
     @IsString()
     @IsOptional()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid program ID format' })
     programId?: string;
 
     @IsNotEmpty()
@@ -54,10 +58,13 @@ export class CreateFeeDto {
     @IsNumber()
     @IsOptional()
     @Min(0)
+    @Max(1000)
     lateFeePerDay?: number;
 
     @IsString()
     @IsOptional()
+    @MaxLength(500)
+    @Matches(/^[a-zA-Z0-9\s\-.,]+$/, { message: 'Description contains invalid characters' })
     description?: string;
 
     @IsEnum(FeeStatus)
@@ -66,12 +73,16 @@ export class CreateFeeDto {
 
     @IsString()
     @IsOptional()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid university ID format' })
     universityId?: string;
 }
 
 export class UpdateFeeDto {
     @IsString()
     @IsOptional()
+    @MinLength(3)
+    @MaxLength(100)
+    @Matches(/^[a-zA-Z0-9\s\-]+$/, { message: 'Name can only contain letters, numbers, spaces, and hyphens' })
     name?: string;
 
     @IsEnum(FeeType)
@@ -80,55 +91,73 @@ export class UpdateFeeDto {
 
     @IsNumber()
     @IsOptional()
+    @Min(1)
+    @Max(1000000)
     amount?: number;
 
     @IsString()
     @IsOptional()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Due date must be in YYYY-MM-DD format' })
     dueDate?: string;
 
     @IsNumber()
     @IsOptional()
+    @Min(0)
+    @Max(1000)
     lateFeePerDay?: number;
 
     @IsString()
     @IsOptional()
+    @MaxLength(500)
+    @Matches(/^[a-zA-Z0-9\s\-.,]+$/, { message: 'Description contains invalid characters' })
     description?: string;
 
     @IsString()
     @IsOptional()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid university ID format' })
     universityId?: string;
 }
 
 export class AssignFeeToStudentDto {
     @IsString()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid student ID format' })
     studentId: string;
 
     @IsString()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid fee ID format' })
     feeId: string;
 
     @IsNumber()
     @IsOptional()
+    @Min(1)
+    @Max(1000000)
     customAmount?: number;
 
     @IsString()
     @IsOptional()
+    @MaxLength(500)
+    @Matches(/^[a-zA-Z0-9\s\-.,]+$/, { message: 'Remarks contains invalid characters' })
     remarks?: string;
 
     @IsString()
     @IsOptional()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid university ID format' })
     universityId?: string;
 }
 
 export class RecordPaymentDto {
     @IsString()
     @IsOptional()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid student ID format' })
     studentId?: string;
 
     @IsString()
+    @Matches(/^[0-9a-fA-F]{24}$/, { message: 'Invalid fee ID format' })
     feeId: string;
 
     @IsNumber()
-    @Min(0)
+    @Min(1)
+    @Max(1000000)
     amountPaid: number;
 
     @IsEnum(PaymentMethod)
@@ -136,14 +165,19 @@ export class RecordPaymentDto {
 
     @IsString()
     @IsOptional()
+    @MaxLength(100)
+    @Matches(/^[A-Z0-9\-]+$/, { message: 'Transaction ID can only contain uppercase letters, numbers, and hyphens' })
     transactionId?: string;
 
     @IsString()
     @IsOptional()
+    @MaxLength(500)
+    @Matches(/^[a-zA-Z0-9\s\-.,]+$/, { message: 'Remarks contains invalid characters' })
     remarks?: string;
 
     @IsString()
     @IsOptional()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Payment date must be in YYYY-MM-DD format' })
     @Type(() => Date)
     paymentDate?: Date;
 }

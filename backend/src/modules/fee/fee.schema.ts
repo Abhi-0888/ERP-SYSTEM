@@ -1,6 +1,22 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
+export enum FeeStatusEnum {
+    PENDING = 'PENDING',
+    PARTIALLY_PAID = 'PARTIALLY_PAID',
+    FULLY_PAID = 'FULLY_PAID',
+    OVERDUE = 'OVERDUE',
+    WAIVED = 'WAIVED',
+}
+
+export enum PaymentMethodEnum {
+    CASH = 'CASH',
+    CHEQUE = 'CHEQUE',
+    BANK_TRANSFER = 'BANK_TRANSFER',
+    CARD = 'CARD',
+    ONLINE = 'ONLINE',
+}
+
 export type FeeStructureDocument = FeeStructure & Document;
 
 @Schema({ timestamps: true })
@@ -20,17 +36,17 @@ export class FeeStructure {
     @Prop({ required: true })
     type: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, min: 1, max: 1000000 })
     amount: number;
 
     @Prop()
     dueDate: Date;
 
-    @Prop()
+    @Prop({ maxlength: 500 })
     description: string;
 
-    @Prop({ default: 'PENDING' })
-    status: string;
+    @Prop({ enum: Object.values(FeeStatusEnum), default: FeeStatusEnum.PENDING })
+    status: FeeStatusEnum;
 }
 
 export const FeeStructureSchema = SchemaFactory.createForClass(FeeStructure);
@@ -43,39 +59,39 @@ export class Transaction {
     studentId: MongooseSchema.Types.ObjectId;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'FeeStructure', required: true })
-    feeId: MongooseSchema.Types.ObjectId; // Service uses feeId
+    feeId: MongooseSchema.Types.ObjectId;
 
-    @Prop({ required: true })
+    @Prop({ required: true, min: 1, max: 1000000 })
     amount: number;
 
-    @Prop({ default: 0 })
+    @Prop({ default: 0, min: 0, max: 1000000 })
     amountPaid: number;
 
-    @Prop()
-    paymentMethod: string; // Service uses paymentMethod
+    @Prop({ enum: Object.values(PaymentMethodEnum) })
+    paymentMethod: PaymentMethodEnum;
 
-    @Prop({ default: 'PENDING' })
-    status: string;
+    @Prop({ enum: Object.values(FeeStatusEnum), default: FeeStatusEnum.PENDING })
+    status: FeeStatusEnum;
 
-    @Prop()
+    @Prop({ maxlength: 100 })
     transactionId: string;
 
     @Prop()
-    lastPaymentDate: Date; // Service uses lastPaymentDate
+    lastPaymentDate: Date;
 
     @Prop()
-    dueDate: Date; // Service uses dueDate
+    dueDate: Date;
 
     @Prop()
     paymentDate: Date;
 
-    @Prop()
+    @Prop({ maxlength: 100 })
     receiptNumber: string;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
     processedBy: MongooseSchema.Types.ObjectId;
 
-    @Prop()
+    @Prop({ maxlength: 500 })
     remarks: string;
 
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University' })
