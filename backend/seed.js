@@ -73,7 +73,7 @@ async function bootstrap() {
         console.log('2 Sections created');
         
         const bcrypt = require('bcrypt');
-        const password = await bcrypt.hash('SecurePass@2026!', 10);
+        const password = await bcrypt.hash('admin123', 10);
         
         const faculty = await userModel.insertMany([
             { username: 'superadmin', name: 'Super Admin', password, role: 'SUPER_ADMIN', isActive: true, email: 'superadmin@educore.com' },
@@ -94,7 +94,7 @@ async function bootstrap() {
         console.log('14 Faculty/Staff created');
         
         const students = [];
-        const studentPassword = await bcrypt.hash('StudentPass@2026!', 10);
+        const studentPassword = await bcrypt.hash('student123', 10);
         for (let i = 1; i <= 10; i++) {
             const user = await userModel.create({
                 username: `student${i.toString().padStart(3, '0')}`,
@@ -133,12 +133,12 @@ async function bootstrap() {
         
         console.log('\n=== SEED COMPLETED ===');
         console.log('Demo Accounts (NEW PASSWORDS):');
-        console.log('  Admin/Faculty: SecurePass@2026!');
-        console.log('  Students: StudentPass@2026!');
+        console.log('  Admin/Faculty: admin123');
+        console.log('  Students: student123');
         console.log('  superadmin, admin_srmap, principal, registrar');
         console.log('  hod_cse, hod_ece, faculty_cse1, faculty_cse2');
         console.log('  finance_head, accountant, librarian, hostel_warden');
-        console.log('  exam_controller, placement, student001-student010');
+        console.log('  exam_controller, placement, student_cse1-student_me1');
         
     } catch (error) {
         console.error('Seed failed:', error);
