@@ -13,8 +13,6 @@ export class AuthController {
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    @UseGuards(ThrottlerGuard)
-    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto.username, loginDto.password);
     }
