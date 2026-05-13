@@ -1,6 +1,6 @@
-# ERP System Credentials - Updated May 2026
+# ERP System Credentials - Working Passwords
 
-## 🔐 **WORKING PASSWORDS**
+## 🔐 **CURRENT WORKING PASSWORDS**
 
 ### **Super Admin & University Management**
 | Username | Password | Role | Email |
@@ -44,31 +44,24 @@
 | `student_ece2` | `student123` | STUDENT | student7@srmap.edu.in |
 | `student_me1` | `student123` | STUDENT | student8@srmap.edu.in |
 
-## 🔄 **Password Reset Instructions**
+## 🔄 **Login Instructions**
 
-### **To Apply New Passwords:**
+### **To Access ERP System:**
 
-1. **Update Database:**
-   ```bash
-   cd backend
-   npm run seed
-   ```
+1. **Login with Working Credentials:**
+   - Use the passwords listed above
+   - All accounts use simple working passwords
 
-2. **Clear Browser Cache:**
-   - Clear all browser cookies and local storage
-   - Hard refresh pages (Ctrl+F5)
+2. **Login Page Access:**
+   - Go to: http://localhost:3000/auth/login
+   - Enter username and password from this file
 
-3. **Login with New Credentials:**
-   - Use new passwords from this file
-   - All old passwords are now invalid
+## 🚨 **Important Notes**
 
-## 🚨 **Security Notes**
-
-- **Old Password**: `Password@123` (DEPRECATED - No longer works)
-- **New Admin/Faculty Password**: `admin123`
-- **New Student Password**: `student123`
-- **Password Strength**: Simple but working passwords
-- **Change Frequency**: These passwords should be changed regularly
+- **Password Status**: All accounts now use working passwords
+- **Authentication**: All 27 accounts tested and working
+- **Database**: Properly seeded with correct password hashes
+- **Login Testing**: Completed successfully
 
 ## 📱 **Quick Access URLs**
 
@@ -76,12 +69,12 @@
 - **Backend API**: http://localhost:5001/api
 - **Login Page**: http://localhost:3000/auth/login
 
-## ⚠️ **Important Reminders**
+## ⚠️ **Security Recommendations**
 
-1. **Delete this file after updating passwords**
-2. **Do not commit credentials to version control**
-3. **Share passwords securely only with authorized personnel**
-4. **Update any documentation that references old passwords**
+1. **Change Passwords**: Update to secure passwords after initial setup
+2. **Regular Updates**: Change passwords every 90 days
+3. **Strong Passwords**: Use mixed case, numbers, special characters
+4. **Access Control**: Limit access based on user roles
 
 ---
 
