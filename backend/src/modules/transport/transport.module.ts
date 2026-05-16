@@ -3,9 +3,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TransportController } from './transport.controller';
 import { TransportService } from './transport.service';
 import { Vehicle, VehicleSchema, Route, RouteSchema, TransportEnrollment, TransportEnrollmentSchema } from './transport.schema';
+import { FeeModule } from '../fee/fee.module';
 
 @Module({
     imports: [
+        FeeModule,
         MongooseModule.forFeature([
             { name: Vehicle.name, schema: VehicleSchema },
             { name: Route.name, schema: RouteSchema },

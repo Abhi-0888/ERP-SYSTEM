@@ -29,7 +29,8 @@ async function seed() {
     const RouteModel: Model<any> = app.get(getModelToken('Route'));
     const BookModel: Model<any> = app.get(getModelToken('Book'));
 
-    const defaultPassword = await bcrypt.hash('Password@123', 10);
+    const adminPassword = await bcrypt.hash('admin123', 10);
+    const studentPassword = await bcrypt.hash('student123', 10);
 
     console.log('🌱 Starting comprehensive seed...\n');
 
@@ -41,13 +42,14 @@ async function seed() {
             username: 'superadmin',
             name: 'Super Administrator',
             email: 'superadmin@educore.com',
-            password: defaultPassword,
+            password: adminPassword,
             role: 'SUPER_ADMIN',
             isActive: true,
         });
         console.log('   ✅ Super Admin created');
     } else {
-        console.log('   ⏭️  Super Admin already exists');
+        await UserModel.findByIdAndUpdate(superAdmin._id, { password: adminPassword });
+        console.log('   ⏭️  Super Admin updated');
     }
 
     // ========== 2. UNIVERSITY ==========
@@ -104,14 +106,15 @@ async function seed() {
             username: 'admin_srmap',
             name: 'University Administrator',
             email: 'admin@srmap.edu.in',
-            password: defaultPassword,
+            password: adminPassword,
             role: 'UNIVERSITY_ADMIN',
             universityId,
             isActive: true,
         });
         console.log('   ✅ University Admin created');
     } else {
-        console.log('   ⏭️  University Admin already exists');
+        await UserModel.findByIdAndUpdate(uniAdmin._id, { password: adminPassword });
+        console.log('   ⏭️  University Admin updated');
     }
 
     // ========== 5. DEPARTMENTS ==========
@@ -152,10 +155,11 @@ async function seed() {
     for (const s of staffData) {
         let u = await UserModel.findOne({ username: s.username });
         if (!u) {
-            u = await UserModel.create({ ...s, password: defaultPassword, universityId, isActive: true });
+            u = await UserModel.create({ ...s, password: adminPassword, universityId, isActive: true });
             console.log(`   ✅ ${s.role} (${s.username}) created`);
         } else {
-            console.log(`   ⏭️  ${s.role} (${s.username}) already exists`);
+            await UserModel.findByIdAndUpdate(u._id, { password: adminPassword });
+            console.log(`   ⏭️  ${s.role} (${s.username}) updated`);
         }
         staffUsers[s.username] = u;
     }
@@ -181,10 +185,11 @@ async function seed() {
     for (const f of facultyData) {
         let u = await UserModel.findOne({ username: f.username });
         if (!u) {
-            u = await UserModel.create({ ...f, password: defaultPassword, universityId, isActive: true });
+            u = await UserModel.create({ ...f, password: adminPassword, universityId, isActive: true });
             console.log(`   ✅ ${f.role} (${f.username}) created`);
         } else {
-            console.log(`   ⏭️  ${f.role} (${f.username}) already exists`);
+            await UserModel.findByIdAndUpdate(u._id, { password: adminPassword });
+            console.log(`   ⏭️  ${f.role} (${f.username}) updated`);
         }
         facultyUsers[f.username] = u;
     }
@@ -300,7 +305,7 @@ async function seed() {
                 username: s.username,
                 name: s.name,
                 email: s.email,
-                password: defaultPassword,
+                password: studentPassword,
                 role: 'STUDENT',
                 universityId,
                 departmentId: departments[s.dept]._id,
@@ -336,8 +341,9 @@ async function seed() {
             console.log(`   ✅ Student ${s.username} (${s.enrollmentNo}) created`);
         } else {
             const profile = await StudentProfileModel.findOne({ userId: user._id });
+            await UserModel.findByIdAndUpdate(user._id, { password: studentPassword });
             studentProfiles[s.username] = profile;
-            console.log(`   ⏭️  Student ${s.username} already exists`);
+            console.log(`   ⏭️  Student ${s.username} updated`);
         }
     }
 
@@ -381,20 +387,23 @@ async function seed() {
         if (tuitionFee) {
             const existing = await TransactionModel.findOne({ studentId: profile._id, feeId: tuitionFee._id });
             if (!existing) {
-                const isPaid = ['student_cse1', 'student_cse2'].includes(key);
-                const isPartial = ['student_cse3', 'student_ece1'].includes(key);
                 await TransactionModel.create({
                     studentId: profile._id,
                     feeId: tuitionFee._id,
                     amount: tuitionFee.amount,
-                    amountPaid: isPaid ? tuitionFee.amount : (isPartial ? 125000 : 0),
-                    status: isPaid ? 'FULLY_PAID' : (isPartial ? 'PARTIALLY_PAID' : 'PENDING'),
-                    paymentMethod: isPaid || isPartial ? 'BANK_TRANSFER' : undefined,
-                    paymentDate: isPaid || isPartial ? new Date() : undefined,
-                    transactionId: isPaid || isPartial ? `TXN-TUI-${Date.now()}-${Math.random().toString(36).substr(2, 6)}` : undefined,
-                    dueDate: new Date('2025-01-31'),
+                    amountPaid: 0,
+                    status: 'PENDING',
+                    dueDate: new Date('2025-06-30'),
                     universityId,
-                    remarks: `Tuition fee for ${key}`,
+                    remarks: `Tuition fee assigned to ${key}`,
+                });
+            } else {
+                await TransactionModel.findByIdAndUpdate(existing._id, {
+                    status: 'PENDING',
+                    amountPaid: 0,
+                    paymentDate: null,
+                    transactionId: null,
+                    paymentMethod: null
                 });
             }
         }
@@ -402,19 +411,23 @@ async function seed() {
         if (hostelFee && ['student_cse1', 'student_cse3', 'student_ece1', 'student_me1'].includes(key)) {
             const existing = await TransactionModel.findOne({ studentId: profile._id, feeId: hostelFee._id });
             if (!existing) {
-                const isPaid = key === 'student_cse1';
                 await TransactionModel.create({
                     studentId: profile._id,
                     feeId: hostelFee._id,
                     amount: hostelFee.amount,
-                    amountPaid: isPaid ? hostelFee.amount : 0,
-                    status: isPaid ? 'FULLY_PAID' : 'PENDING',
-                    paymentMethod: isPaid ? 'ONLINE' : undefined,
-                    paymentDate: isPaid ? new Date() : undefined,
-                    transactionId: isPaid ? `TXN-HOS-${Date.now()}` : undefined,
-                    dueDate: new Date('2025-01-31'),
+                    amountPaid: 0,
+                    status: 'PENDING',
+                    dueDate: new Date('2025-06-30'),
                     universityId,
-                    remarks: `Hostel fee for ${key}`,
+                    remarks: `Hostel fee assigned to ${key}`,
+                });
+            } else {
+                await TransactionModel.findByIdAndUpdate(existing._id, {
+                    status: 'PENDING',
+                    amountPaid: 0,
+                    paymentDate: null,
+                    transactionId: null,
+                    paymentMethod: null
                 });
             }
         }
@@ -579,11 +592,54 @@ async function seed() {
         }
     }
 
+    // ========== 15. TIMETABLE ==========
+    console.log('1️⃣5️⃣ Creating Published Timetables for Sem 1 & 3...');
+    const TimetableModel: Model<any> = app.get(getModelToken('Timetable'));
+    const semestersToSeed = [1, 3];
+    
+    for (const [code, prog] of Object.entries(programs) as [string, any][]) {
+        for (const semester of semestersToSeed) {
+            let timetable = await TimetableModel.findOne({ programId: prog._id, semester });
+            if (!timetable) {
+                timetable = await TimetableModel.create({
+                    universityId,
+                    academicYearId: academicYear._id,
+                    programId: prog._id,
+                    departmentId: (prog as any).departmentId,
+                    semester,
+                    batch: semester === 1 ? '2024' : '2021',
+                    name: `Spring 2025 - ${code} Sem ${semester}`,
+                    status: 'PUBLISHED',
+                    isActive: true,
+                    slots: [
+                        {
+                            day: 'Monday',
+                            startTime: '09:00',
+                            endTime: '10:00',
+                            courseId: courses['CS101']?._id || courses['EC101']?._id,
+                            facultyId: facultyUsers['faculty_cse1']?._id,
+                            room: 'LHB-101',
+                        },
+                        {
+                            day: 'Wednesday',
+                            startTime: '11:00',
+                            endTime: '12:00',
+                            courseId: courses['CS102']?._id || courses['EC102']?._id,
+                            facultyId: facultyUsers['faculty_cse2']?._id,
+                            room: 'LHB-102',
+                        }
+                    ]
+                });
+                console.log(`   ✅ Timetable for ${code} Sem ${semester} created`);
+            }
+        }
+    }
+
     // ========== SUMMARY ==========
     console.log('\n' + '='.repeat(60));
     console.log('🎉 SEED COMPLETED SUCCESSFULLY!');
     console.log('='.repeat(60));
-    console.log('\n📋 Login Credentials (all use password: Password@123):');
+    console.log('\n📋 Login Credentials (Admins: admin123, Students: student123):');
     console.log('─'.repeat(50));
     console.log('  Super Admin:      superadmin');
     console.log('  University Admin: admin_srmap');

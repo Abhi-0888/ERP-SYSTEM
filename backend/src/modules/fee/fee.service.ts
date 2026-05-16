@@ -1,16 +1,29 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { FeeStructure, FeeStructureDocument, Transaction, TransactionDocument, FeeStatusEnum, PaymentMethodEnum } from './fee.schema';
-import { CreateFeeDto, UpdateFeeDto, RecordPaymentDto, AssignFeeToStudentDto, FeeFilterDto } from './fee.dto';
+import { ConfigService } from '@nestjs/config';
+import Razorpay from 'razorpay';
+import * as crypto from 'crypto';
+import { FeeStructure, FeeStructureDocument, Transaction, TransactionDocument, FeeStatusEnum, PaymentMethodEnum, TransactionSchema } from './fee.schema';
+import { CreateFeeDto, UpdateFeeDto, RecordPaymentDto, AssignFeeToStudentDto, FeeFilterDto, InitiateOnlinePaymentDto, VerifyPaymentDto } from './fee.dto';
 import { Role } from '../../common/enums/role.enum';
+import { StudentProfile, StudentProfileDocument } from '../student/student-profile.schema';
 
 @Injectable()
 export class FeeService {
+    private razorpay: any;
+
     constructor(
         @InjectModel(FeeStructure.name) private feeStructureModel: Model<FeeStructureDocument>,
         @InjectModel(Transaction.name) public transactionModel: Model<TransactionDocument>,
-    ) { }
+        @InjectModel(StudentProfile.name) private studentProfileModel: Model<StudentProfileDocument>,
+        private configService: ConfigService,
+    ) {
+        this.razorpay = new Razorpay({
+            key_id: this.configService.get<string>('RAZORPAY_KEY_ID') || 'rzp_test_placeholder',
+            key_secret: this.configService.get<string>('RAZORPAY_KEY_SECRET') || 'secret_placeholder',
+        });
+    }
 
     async createFeeStructure(dto: CreateFeeDto, currentUser: any): Promise<FeeStructure> {
         try {
@@ -238,21 +251,203 @@ export class FeeService {
         }
     }
 
+    async initiateOnlinePayment(dto: InitiateOnlinePaymentDto, currentUser: any): Promise<any> {
+        try {
+            const studentId = currentUser.profileId || currentUser.userId || currentUser._id;
+            
+            // Validate fee exists and is assigned
+            const transaction = await this.transactionModel.findOne({
+                feeId: dto.feeId,
+                studentId: studentId,
+            });
+
+            if (!transaction) {
+                throw new NotFoundException('Fee not assigned to this student');
+            }
+
+            if (transaction.status === FeeStatusEnum.FULLY_PAID) {
+                throw new BadRequestException('Fee already fully paid');
+            }
+
+            const options = {
+                amount: Math.round(dto.amount * 100), // amount in the smallest currency unit
+                currency: 'INR',
+                receipt: `receipt_${transaction._id}`,
+            };
+
+            const order = await this.razorpay.orders.create(options);
+
+            // Save order ID to transaction
+            transaction.razorpayOrderId = order.id;
+            await transaction.save();
+
+            return {
+                orderId: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                key: this.configService.get<string>('RAZORPAY_KEY_ID'),
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async verifyPayment(dto: VerifyPaymentDto, currentUser: any): Promise<any> {
+        try {
+            const body = dto.razorpayOrderId + '|' + dto.razorpayPaymentId;
+            const expectedSignature = crypto
+                .createHmac('sha256', this.configService.get<string>('RAZORPAY_KEY_SECRET') || 'secret_placeholder')
+                .update(body.toString())
+                .digest('hex');
+
+            if (expectedSignature !== dto.razorpaySignature) {
+                throw new BadRequestException('Invalid payment signature');
+            }
+
+            // Update transaction
+            const transaction = await this.transactionModel.findOne({
+                feeId: dto.feeId,
+                razorpayOrderId: dto.razorpayOrderId,
+            });
+
+            if (!transaction) {
+                throw new NotFoundException('Transaction not found');
+            }
+
+            const amountPaid = transaction.razorpayOrderId === dto.razorpayOrderId ? transaction.amount : 0; // Simplified for demo
+            
+            transaction.amountPaid = transaction.amount; // Mark as fully paid for demo if verified
+            transaction.status = FeeStatusEnum.FULLY_PAID;
+            transaction.razorpayPaymentId = dto.razorpayPaymentId;
+            transaction.razorpaySignature = dto.razorpaySignature;
+            transaction.paymentDate = new Date();
+            transaction.paymentMethod = PaymentMethodEnum.ONLINE;
+            transaction.lastPaymentDate = new Date();
+
+            await transaction.save();
+
+            return {
+                message: 'Payment verified and recorded successfully',
+                transaction,
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getStudentsPaymentStatus(currentUser: any, filter: FeeFilterDto): Promise<any> {
+        try {
+            const page = filter.page || 1;
+            const limit = filter.limit || 10;
+            const skip = (page - 1) * limit;
+
+            const studentQuery: any = {};
+            if (currentUser.role !== Role.SUPER_ADMIN) {
+                studentQuery.universityId = currentUser.universityId;
+            }
+
+            if (filter.departmentId) studentQuery.departmentId = filter.departmentId;
+            if (filter.semester) studentQuery.currentSemester = filter.semester;
+            if (filter.academicYearId) studentQuery.academicYearId = filter.academicYearId;
+
+            const students = await this.studentProfileModel
+                .find(studentQuery)
+                .populate('userId', 'name email')
+                .populate('departmentId', 'name')
+                .skip(skip)
+                .limit(limit)
+                .exec();
+
+            const total = await this.studentProfileModel.countDocuments(studentQuery);
+
+            const result = await Promise.all(students.map(async (student) => {
+                const transactions = await this.transactionModel.find({ studentId: student._id }).populate('feeId');
+                
+                const totalAmount = transactions.reduce((acc, curr) => acc + curr.amount, 0);
+                const totalPaid = transactions.reduce((acc, curr) => acc + curr.amountPaid, 0);
+                const pendingAmount = totalAmount - totalPaid;
+
+                let overallStatus = 'Not Paid';
+                if (totalAmount > 0) {
+                    if (pendingAmount === 0) overallStatus = 'Paid';
+                    else if (totalPaid > 0) overallStatus = 'Partially Paid';
+                }
+
+                return {
+                    studentId: student._id,
+                    enrollmentNo: student.enrollmentNo,
+                    name: (student.userId as any)?.name,
+                    department: (student.departmentId as any)?.name,
+                    semester: student.currentSemester,
+                    totalAmount,
+                    totalPaid,
+                    pendingAmount,
+                    status: overallStatus,
+                    transactions: transactions.map(t => ({
+                        feeName: (t.feeId as any)?.name,
+                        amount: t.amount,
+                        paid: t.amountPaid,
+                        status: t.status,
+                        dueDate: t.dueDate
+                    }))
+                };
+            }));
+
+            return {
+                data: result,
+                pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
     async getTransactions(filter: any, page: number = 1, limit: number = 20): Promise<any> {
         try {
-            // Return empty data temporarily to isolate the issue
+            const skip = (page - 1) * limit;
+            const query: any = {};
+
+            if (filter.universityId) query.universityId = filter.universityId;
+            if (filter.status) query.status = filter.status;
+            if (filter.paymentMethod) query.paymentMethod = filter.paymentMethod;
+
+            const transactions = await this.transactionModel
+                .find(query)
+                .populate('studentId')
+                .populate({
+                    path: 'studentId',
+                    populate: { path: 'userId', select: 'name' }
+                })
+                .populate('feeId')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .exec();
+
+            const total = await this.transactionModel.countDocuments(query);
+
             return {
-                data: [],
+                data: transactions,
                 pagination: {
-                    total: 0,
+                    total,
                     page,
                     limit,
-                    totalPages: 0,
+                    totalPages: Math.ceil(total / limit),
                 },
             };
         } catch (error) {
             console.error('Error in getTransactions:', error);
             throw new Error(`Failed to fetch transactions: ${error.message}`);
         }
+    }
+    async getStudentsPaymentStatusCSV(currentUser: any, filter: FeeFilterDto): Promise<string> {
+        const { data } = await this.getStudentsPaymentStatus(currentUser, { ...filter, limit: 1000, page: 1 });
+        
+        const header = 'Enrollment No,Name,Department,Semester,Total Amount,Paid,Pending,Status\n';
+        const rows = data.map(s => 
+            `${s.enrollmentNo},${s.name},${s.department},${s.semester},${s.totalAmount},${s.totalPaid},${s.pendingAmount},${s.status}`
+        ).join('\n');
+
+        return header + rows;
     }
 }

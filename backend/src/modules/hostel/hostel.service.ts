@@ -1,15 +1,18 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Hostel, HostelDocument } from './hostel.schema';
-import { Room, RoomDocument } from './hostel.schema';
+import { Hostel, HostelDocument, Room, RoomDocument, HostelEnrollment, HostelEnrollmentDocument } from './hostel.schema';
 import { CreateHostelDto, CreateRoomDto, AllocateRoomDto } from './hostel.dto';
+import { FeeService } from '../fee/fee.service';
+import { FeeType } from '../fee/fee.dto';
 
 @Injectable()
 export class HostelService {
     constructor(
         @InjectModel(Hostel.name) private hostelModel: Model<HostelDocument>,
         @InjectModel(Room.name) private roomModel: Model<RoomDocument>,
+        @InjectModel(HostelEnrollment.name) private enrollmentModel: Model<HostelEnrollmentDocument>,
+        private feeService: FeeService,
     ) { }
 
     // ============= HOSTEL MANAGEMENT =============
@@ -188,9 +191,40 @@ export class HostelService {
             { new: true },
         );
 
+        // Create Enrollment record
+        const enrollment = new this.enrollmentModel({
+            studentId,
+            hostelId: room.hostelId,
+            roomId,
+            startDate: new Date(),
+            universityId: (room as any).universityId || (await this.hostelModel.findById(room.hostelId)).universityId,
+            status: 'Active'
+        });
+        await enrollment.save();
+
+        // Assign Fee automatically
+        try {
+            const feeStructures = await (this.feeService as any).feeStructureModel.find({ 
+                type: FeeType.HOSTEL,
+                universityId: enrollment.universityId
+            }).sort({ createdAt: -1 });
+
+            if (feeStructures.length > 0) {
+                await this.feeService.assignFeeToStudent({
+                    studentId,
+                    feeId: feeStructures[0]._id,
+                    remarks: `Hostel Fee for ${room.roomNumber}`
+                }, { universityId: enrollment.universityId });
+            }
+        } catch (feeError) {
+            console.error('Failed to auto-assign hostel fee:', feeError);
+            // Don't fail the allocation if fee assignment fails
+        }
+
         return {
             message: 'Student allocated to room successfully',
             room: updatedRoom,
+            enrollment
         };
     }
 

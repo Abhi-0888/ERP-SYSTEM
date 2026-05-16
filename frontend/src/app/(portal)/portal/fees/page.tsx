@@ -9,10 +9,12 @@ import {
 } from "@/components/ui/table";
 import {
     CreditCard, Receipt, AlertCircle, Loader2, ArrowUpRight, CheckCircle2,
-    Calendar, Wallet
+    Calendar, Wallet, Download
 } from "lucide-react";
 import { FeeService } from "@/lib/services/fee.service";
 import { Button } from "@/components/ui/button";
+import Script from "next/script";
+import { toast } from "sonner";
 
 export default function StudentFeesPage() {
     const [feeData, setFeeData] = useState<any>(null);
@@ -20,23 +22,74 @@ export default function StudentFeesPage() {
     const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
 
+    const [paying, setPaying] = useState<string | null>(null);
+
+    const fetchData = async () => {
+        const userId = (user as any)?.id || (user as any)?._id;
+        if (!userId) return;
+        setLoading(true);
+        try {
+            const res = await FeeService.getStudentFeeStatus(userId);
+            setFeeData(res.data || res);
+            setError(null);
+        } catch (err: any) {
+            console.error("Failed to fetch fee status", err);
+            setError("Failed to load fee records. Please try again later.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchFees = async () => {
-            const userId = (user as any)?.id || (user as any)?._id;
-            if (!userId) return;
-            try {
-                const res = await FeeService.getStudentFeeStatus(userId);
-                setFeeData(res.data || res);
-                setError(null);
-            } catch (err: any) {
-                console.error("Failed to fetch fee status", err);
-                setError("Failed to load fee records. Please try again later.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchFees();
+        fetchData();
     }, [user]);
+
+    const handlePayment = async (feeId: string, amount: number) => {
+        setPaying(feeId);
+        try {
+            // 1. Initiate payment on backend
+            const { orderId, currency, key } = await FeeService.initiateOnlinePayment({ feeId, amount });
+
+            // 2. Open Razorpay Checkout
+            const options = {
+                key: key,
+                amount: amount * 100,
+                currency: currency,
+                name: "EduCore ERP",
+                description: "Student Fee Payment",
+                order_id: orderId,
+                handler: async (response: any) => {
+                    try {
+                        // 3. Verify payment on backend
+                        await FeeService.verifyPayment({
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature,
+                            feeId
+                        });
+                        toast.success("Payment successful!");
+                        fetchData();
+                    } catch (err) {
+                        toast.error("Payment verification failed");
+                    }
+                },
+                prefill: {
+                    name: user?.name,
+                    email: user?.email,
+                },
+                theme: {
+                    color: "#4f46e5",
+                },
+            };
+
+            const rzp = new (window as any).Razorpay(options);
+            rzp.open();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to initiate payment");
+        } finally {
+            setPaying(null);
+        }
+    };
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -162,15 +215,45 @@ export default function StudentFeesPage() {
                                         <span className="text-lg font-black text-slate-800">₹{fee.amount?.toLocaleString()}</span>
                                     </TableCell>
                                     <TableCell className="py-6 px-8 text-right">
-                                        <Badge 
-                                            className={`rounded-lg px-3 py-1 font-bold text-[10px] tracking-widest uppercase border-0 ${
-                                                fee.status === 'FULLY_PAID' ? 'bg-emerald-50 text-emerald-600' :
-                                                fee.status === 'PARTIALLY_PAID' ? 'bg-orange-50 text-orange-600' :
-                                                'bg-rose-50 text-rose-600'
-                                            }`}
-                                        >
-                                            {fee.status?.replace('_', ' ') || 'UNPAID'}
-                                        </Badge>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <Badge 
+                                                className={`rounded-lg px-3 py-1 font-bold text-[10px] tracking-widest uppercase border-0 ${
+                                                    fee.status === 'FULLY_PAID' ? 'bg-emerald-50 text-emerald-600' :
+                                                    fee.status === 'PARTIALLY_PAID' ? 'bg-orange-50 text-orange-600' :
+                                                    fee.status === 'OVERDUE' ? 'bg-rose-50 text-rose-600 animate-pulse' :
+                                                    'bg-rose-50 text-rose-600'
+                                                }`}
+                                            >
+                                                {fee.status?.replace('_', ' ') || 'UNPAID'}
+                                            </Badge>
+                                            {fee.lateFeesApplied > 0 && (
+                                                <span className="text-[10px] font-bold text-rose-500">
+                                                    + ₹{fee.lateFeesApplied} Late Fee
+                                                </span>
+                                            )}
+                                            <div className="flex gap-2">
+                                                {(fee.status === 'FULLY_PAID' || fee.status === 'PARTIALLY_PAID') && (
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        className="h-8 border-indigo-100 text-indigo-600 rounded-lg text-xs font-bold"
+                                                        onClick={() => FeeService.downloadInvoice(fee._id)}
+                                                    >
+                                                        <Download className="h-3 w-3 mr-1" /> Invoice
+                                                    </Button>
+                                                )}
+                                                {fee.status !== 'FULLY_PAID' && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold"
+                                                        onClick={() => handlePayment(fee.feeId?._id || fee.feeId, fee.amount + (fee.lateFeesApplied || 0) - (fee.amountPaid || 0))}
+                                                        disabled={paying === (fee.feeId?._id || fee.feeId)}
+                                                    >
+                                                        {paying === (fee.feeId?._id || fee.feeId) ? <Loader2 className="h-3 w-3 animate-spin" /> : "Pay Now"}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )) : (
@@ -217,6 +300,7 @@ export default function StudentFeesPage() {
                     Download Tax Statement
                 </Button>
             </div>
+            <Script src="https://checkout.razorpay.com/v1/checkout.js" />
         </div>
     );
 }

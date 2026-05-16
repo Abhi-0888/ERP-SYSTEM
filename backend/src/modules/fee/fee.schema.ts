@@ -42,6 +42,9 @@ export class FeeStructure {
     @Prop()
     dueDate: Date;
 
+    @Prop({ default: 0 })
+    lateFeePerDay: number;
+
     @Prop({ maxlength: 500 })
     description: string;
 
@@ -67,6 +70,18 @@ export class Transaction {
     @Prop({ default: 0, min: 0, max: 1000000 })
     amountPaid: number;
 
+    @Prop({ default: 0 })
+    lateFeesApplied: number;
+
+    @Prop({ default: 0 })
+    discountAmount: number;
+
+    @Prop({ maxlength: 200 })
+    discountReason: string;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Scholarship' })
+    scholarshipId: MongooseSchema.Types.ObjectId;
+
     @Prop({ enum: Object.values(PaymentMethodEnum) })
     paymentMethod: PaymentMethodEnum;
 
@@ -75,6 +90,15 @@ export class Transaction {
 
     @Prop({ maxlength: 100 })
     transactionId: string;
+
+    @Prop({ maxlength: 100 })
+    razorpayOrderId: string;
+
+    @Prop({ maxlength: 100 })
+    razorpayPaymentId: string;
+
+    @Prop({ maxlength: 200 })
+    razorpaySignature: string;
 
     @Prop()
     lastPaymentDate: Date;

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { FeeService, FeeType, FeeStatus, FeeStructure } from "@/lib/services/fee.service";
 import { AcademicService } from "@/lib/services/academic.service";
+import api from "@/lib/api";
 
 // Accountant/Admin view
 function AdminFeesView() {
@@ -34,6 +35,18 @@ function AdminFeesView() {
     const [actionLoading, setActionLoading] = useState(false);
     const [report, setReport] = useState<any>(null);
 
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [studentDues, setStudentDues] = useState<any[]>([]);
+    const [duesLoading, setDuesLoading] = useState(false);
+    const [txnLoading, setTxnLoading] = useState(false);
+
+    // Filter state
+    const [filters, setFilters] = useState({
+        departmentId: "ALL",
+        semester: "ALL",
+        status: "ALL"
+    });
+
     // Form state
     const [formData, setFormData] = useState({
         name: "",
@@ -43,6 +56,35 @@ function AdminFeesView() {
         dueDate: new Date().toISOString().split('T')[0],
         description: ""
     });
+
+    const fetchTransactions = async () => {
+        setTxnLoading(true);
+        try {
+            const res = await FeeService.getTransactions();
+            setTransactions((res as any).data || res || []);
+        } catch (error) {
+            console.error("Failed to fetch transactions", error);
+        } finally {
+            setTxnLoading(false);
+        }
+    };
+
+    const fetchStudentDues = async () => {
+        setDuesLoading(true);
+        try {
+            const params: any = {};
+            if (filters.departmentId !== "ALL") params.departmentId = filters.departmentId;
+            if (filters.semester !== "ALL") params.semester = filters.semester;
+            if (filters.status !== "ALL") params.status = filters.status;
+
+            const res = await FeeService.getStudentsDashboard(params);
+            setStudentDues((res as any).data || res || []);
+        } catch (error) {
+            console.error("Failed to fetch student dues", error);
+        } finally {
+            setDuesLoading(false);
+        }
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -55,6 +97,10 @@ function AdminFeesView() {
             setStructures((structsRes as any).data?.data || (structsRes as any).data || structsRes || []);
             setAcademicYears((yearsRes as any).data || yearsRes || []);
             setReport((reportRes as any).data || reportRes);
+            
+            // Initial fetch for other tabs
+            fetchTransactions();
+            fetchStudentDues();
         } catch (error) {
             console.error("Failed to fetch fee data", error);
         } finally {
@@ -100,6 +146,30 @@ function AdminFeesView() {
         }
     };
 
+    const handleExport = async () => {
+        try {
+            const params = new URLSearchParams();
+            if (filters.departmentId !== "ALL") params.append("departmentId", filters.departmentId);
+            if (filters.semester !== "ALL") params.append("semester", filters.semester);
+            if (filters.status !== "ALL") params.append("status", filters.status);
+            
+            const response = await api.get(`/fees/dashboard/students/export?${params.toString()}`, {
+                responseType: 'blob'
+            });
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'student_fees.csv');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Failed to export", error);
+            alert("Export failed");
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -108,6 +178,10 @@ function AdminFeesView() {
                     <p className="text-slate-500">Manage fee structures and track collections</p>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleExport}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export CSV
+                    </Button>
                     <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
                         <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -137,10 +211,14 @@ function AdminFeesView() {
                     )}
             </div>
 
-            <Tabs defaultValue="structures">
+            <Tabs defaultValue="structures" onValueChange={(val) => {
+                if (val === 'transactions') fetchTransactions();
+                if (val === 'dues') fetchStudentDues();
+            }}>
                 <TabsList>
                     <TabsTrigger value="structures">Fee Structures</TabsTrigger>
-                    <TabsTrigger value="transactions">Transactions (Soon)</TabsTrigger>
+                    <TabsTrigger value="dues">Student Dues</TabsTrigger>
+                    <TabsTrigger value="transactions">Transactions</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="structures" className="mt-4">
@@ -182,11 +260,98 @@ function AdminFeesView() {
                     </Card>
                 </TabsContent>
 
+                <TabsContent value="dues" className="mt-4">
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle className="text-lg">Student Payment Status</CardTitle>
+                            <div className="flex gap-2">
+                                <Select value={filters.status} onValueChange={(v) => setFilters({...filters, status: v})}>
+                                    <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">All Status</SelectItem>
+                                        <SelectItem value="Paid">Paid</SelectItem>
+                                        <SelectItem value="Partially Paid">Partially Paid</SelectItem>
+                                        <SelectItem value="Not Paid">Not Paid</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button size="sm" variant="outline" onClick={fetchStudentDues}>Apply</Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="pl-6">Student</TableHead>
+                                        <TableHead>Department</TableHead>
+                                        <TableHead>Total Fee</TableHead>
+                                        <TableHead>Paid</TableHead>
+                                        <TableHead>Pending</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {duesLoading ? (
+                                        <TableRow><TableCell colSpan={6} className="text-center py-8">Loading dues...</TableCell></TableRow>
+                                    ) : studentDues.length === 0 ? (
+                                        <TableRow><TableCell colSpan={6} className="text-center py-8">No records found.</TableCell></TableRow>
+                                    ) : (
+                                        studentDues.map((due) => (
+                                            <TableRow key={due.studentId}>
+                                                <TableCell className="pl-6">
+                                                    <div className="font-medium">{due.name}</div>
+                                                    <div className="text-xs text-slate-500">{due.enrollmentNo}</div>
+                                                </TableCell>
+                                                <TableCell>{due.department} (Sem {due.semester})</TableCell>
+                                                <TableCell>₹{due.totalAmount.toLocaleString()}</TableCell>
+                                                <TableCell className="text-green-600 font-medium">₹{due.totalPaid.toLocaleString()}</TableCell>
+                                                <TableCell className="text-red-600 font-medium">₹{due.pendingAmount.toLocaleString()}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={due.status === 'Paid' ? 'default' : 'secondary'}>
+                                                        {due.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
                 <TabsContent value="transactions" className="mt-4">
                     <Card className="border-0 shadow-sm">
-                        <CardContent className="p-12 text-center text-slate-500">
-                            <Receipt className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                            <p>Detailed transaction history coming in next update.</p>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="pl-6">Transaction ID</TableHead>
+                                        <TableHead>Student</TableHead>
+                                        <TableHead>Fee Type</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead>Method</TableHead>
+                                        <TableHead>Date</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {txnLoading ? (
+                                        <TableRow><TableCell colSpan={6} className="text-center py-8">Loading transactions...</TableCell></TableRow>
+                                    ) : transactions.length === 0 ? (
+                                        <TableRow><TableCell colSpan={6} className="text-center py-8">No transactions found.</TableCell></TableRow>
+                                    ) : (
+                                        transactions.map((txn) => (
+                                            <TableRow key={txn._id}>
+                                                <TableCell className="pl-6 font-mono text-xs">{txn.transactionId || txn.razorpayPaymentId || 'N/A'}</TableCell>
+                                                <TableCell>{txn.studentId?.userId?.name || 'Unknown'}</TableCell>
+                                                <TableCell>{txn.feeId?.name || 'Academic'}</TableCell>
+                                                <TableCell className="font-bold text-green-600">₹{txn.amountPaid.toLocaleString()}</TableCell>
+                                                <TableCell><Badge variant="outline">{txn.paymentMethod}</Badge></TableCell>
+                                                <TableCell>{new Date(txn.paymentDate || txn.createdAt).toLocaleDateString()}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
                 </TabsContent>

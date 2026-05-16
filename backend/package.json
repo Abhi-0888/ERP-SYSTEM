@@ -36,6 +36,8 @@
         "mongoose": "^8.0.0",
         "passport": "^0.7.0",
         "passport-jwt": "^4.0.1",
+        "pdfkit": "^0.18.0",
+        "razorpay": "^2.9.6",
         "reflect-metadata": "^0.1.13",
         "rxjs": "^7.8.1"
     },
@@ -48,6 +50,7 @@
         "@types/multer": "^2.0.0",
         "@types/node": "^20.19.37",
         "@types/passport-jwt": "^3.0.13",
+        "@types/pdfkit": "^0.17.6",
         "@typescript-eslint/eslint-plugin": "^6.0.0",
         "@typescript-eslint/parser": "^6.0.0",
         "axios": "^1.13.6",

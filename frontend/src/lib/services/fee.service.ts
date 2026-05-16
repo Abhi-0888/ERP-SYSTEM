@@ -104,9 +104,49 @@ export const FeeService = {
         return response.data;
     },
 
+    // Online Payments
+    initiateOnlinePayment: async (data: { feeId: string; amount: number }): Promise<any> => {
+        const response = await api.post('/fees/payment/initiate', data);
+        return response.data;
+    },
+
+    verifyPayment: async (data: { 
+        razorpayOrderId: string; 
+        razorpayPaymentId: string; 
+        razorpaySignature: string; 
+        feeId: string 
+    }): Promise<any> => {
+        const response = await api.post('/fees/payment/verify', data);
+        return response.data;
+    },
+
+    // Admin Dashboards
+    getStudentsDashboard: async (params: any = {}): Promise<any> => {
+        const response = await api.get('/fees/dashboard/students', { params });
+        return response.data;
+    },
+
+    getTransactions: async (params: any = {}): Promise<any> => {
+        const response = await api.get('/fees/transactions', { params });
+        return response.data;
+    },
+
     // Reports
     getFeeStats: async (): Promise<unknown> => {
         const response = await api.get('/fees/reports/summary');
         return response.data;
+    },
+
+    downloadInvoice: async (transactionId: string) => {
+        const response = await api.get(`/fees/invoice/${transactionId}`, {
+            responseType: 'blob'
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `invoice_${transactionId}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
     }
 };

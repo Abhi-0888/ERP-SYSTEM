@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Vehicle, VehicleDocument, Route, RouteDocument, TransportEnrollment, TransportEnrollmentDocument } from './transport.schema';
 import { CreateVehicleDto, CreateRouteDto, UpdateVehicleDto, UpdateRouteDto, EnrollTransportDto } from './transport.dto';
+import { FeeService } from '../fee/fee.service';
+import { FeeType } from '../fee/fee.dto';
 
 @Injectable()
 export class TransportService {
@@ -10,6 +12,7 @@ export class TransportService {
         @InjectModel(Vehicle.name) private vehicleModel: Model<VehicleDocument>,
         @InjectModel(Route.name) private routeModel: Model<RouteDocument>,
         @InjectModel(TransportEnrollment.name) private enrollmentModel: Model<TransportEnrollmentDocument>,
+        private feeService: FeeService,
     ) { }
 
     // ============= VEHICLE MANAGEMENT =============
@@ -61,7 +64,27 @@ export class TransportService {
     // ============= ENROLLMENT MANAGEMENT =============
     async enrollStudent(universityId: string, studentId: string, dto: EnrollTransportDto): Promise<TransportEnrollment> {
         const enrollment = new this.enrollmentModel({ ...dto, studentId, universityId });
-        return enrollment.save();
+        const saved = await enrollment.save();
+
+        // Assign Fee automatically
+        try {
+            const feeStructures = await (this.feeService as any).feeStructureModel.find({ 
+                type: FeeType.TRANSPORT,
+                universityId
+            }).sort({ createdAt: -1 });
+
+            if (feeStructures.length > 0) {
+                await this.feeService.assignFeeToStudent({
+                    studentId,
+                    feeId: feeStructures[0]._id,
+                    remarks: `Transport Fee for Route: ${dto.routeId}`
+                }, { universityId });
+            }
+        } catch (feeError) {
+            console.error('Failed to auto-assign transport fee:', feeError);
+        }
+
+        return saved;
     }
 
     async getStudentEnrollment(studentId: string): Promise<TransportEnrollment | null> {

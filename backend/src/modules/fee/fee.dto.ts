@@ -204,6 +204,15 @@ export class FeeFilterDto {
     @IsOptional()
     academicYearId?: string;
 
+    @IsString()
+    @IsOptional()
+    departmentId?: string;
+
+    @IsNumber()
+    @IsOptional()
+    @Type(() => Number)
+    semester?: number;
+
     @IsEnum(FeeType)
     @IsOptional()
     type?: FeeType;
@@ -217,10 +226,44 @@ export class FeeFilterDto {
     search?: string;
 
     @IsOptional()
+    @Type(() => Number)
     page?: number;
 
     @IsOptional()
+    @Type(() => Number)
     limit?: number;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
+}
+
+export class InitiateOnlinePaymentDto {
+    @IsString()
+    @IsNotEmpty()
+    feeId: string;
+
+    @IsNumber()
+    @Min(1)
+    amount: number;
+}
+
+export class VerifyPaymentDto {
+    @IsString()
+    @IsNotEmpty()
+    razorpayOrderId: string;
+
+    @IsString()
+    @IsNotEmpty()
+    razorpayPaymentId: string;
+
+    @IsString()
+    @IsNotEmpty()
+    razorpaySignature: string;
+
+    @IsString()
+    @IsNotEmpty()
+    feeId: string;
 }
 
 export class FeeReportDto {
@@ -232,13 +275,19 @@ export class FeeReportDto {
     @IsOptional()
     programId?: string;
 
+    @IsString()
+    @IsOptional()
+    departmentId?: string;
+
     @IsEnum(FeeStatus)
     @IsOptional()
     status?: FeeStatus;
 
     @IsOptional()
+    @Type(() => Date)
     startDate?: Date;
 
     @IsOptional()
+    @Type(() => Date)
     endDate?: Date;
 }

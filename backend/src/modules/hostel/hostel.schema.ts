@@ -59,3 +59,31 @@ export class Room {
 
 export const RoomSchema = SchemaFactory.createForClass(Room);
 RoomSchema.index({ hostelId: 1, roomNumber: 1 }, { unique: true });
+
+@Schema({ timestamps: true })
+export class HostelEnrollment {
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'StudentProfile', required: true })
+    studentId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Hostel', required: true })
+    hostelId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Room', required: true })
+    roomId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ required: true })
+    startDate: Date;
+
+    @Prop()
+    endDate: Date;
+
+    @Prop({ default: 'Active', enum: ['Active', 'Pending', 'Vacated', 'Cancelled'] })
+    status: string;
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University', required: true })
+    universityId: MongooseSchema.Types.ObjectId;
+}
+
+export type HostelEnrollmentDocument = HostelEnrollment & Document;
+export const HostelEnrollmentSchema = SchemaFactory.createForClass(HostelEnrollment);
+HostelEnrollmentSchema.index({ studentId: 1, hostelId: 1 }, { unique: true });

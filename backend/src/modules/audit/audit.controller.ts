@@ -8,11 +8,11 @@ import { Role } from '../../common/enums/role.enum';
 import { UniversityIsolationGuard } from '../../common/guards/university-isolation.guard';
 
 @Controller('audit')
-@UseGuards(JwtAuthGuard, RolesGuard, UniversityIsolationGuard)
 export class AuditController {
     constructor(private readonly auditService: AuditService) {}
 
     @Get('logs')
+    @UseGuards(JwtAuthGuard, RolesGuard, UniversityIsolationGuard)
     @Roles(Role.UNIVERSITY_ADMIN, Role.REGISTRAR, Role.SUPER_ADMIN)
     async getLogs(
         @Req() req: Request,
