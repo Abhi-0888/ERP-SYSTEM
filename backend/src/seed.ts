@@ -595,6 +595,11 @@ async function seed() {
     // ========== 15. TIMETABLE ==========
     console.log('1️⃣5️⃣ Creating Published Timetables for Sem 1 & 3...');
     const TimetableModel: Model<any> = app.get(getModelToken('Timetable'));
+    
+    // Clear old timetables to ensure fresh seed with correct schema
+    await TimetableModel.deleteMany({});
+    console.log('   🧹 Old timetables cleared');
+
     const semestersToSeed = [1, 3];
     
     for (const [code, prog] of Object.entries(programs) as [string, any][]) {

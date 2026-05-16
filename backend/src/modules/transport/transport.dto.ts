@@ -21,6 +21,10 @@ export class CreateVehicleDto {
     @IsOptional()
     @IsString()
     health?: string;
+
+    @IsOptional()
+    @IsMongoId()
+    universityId?: string;
 }
 
 export class CreateRouteDto {
@@ -40,6 +44,10 @@ export class CreateRouteDto {
     @IsOptional()
     @IsMongoId()
     vehicleId?: string;
+
+    @IsOptional()
+    @IsMongoId()
+    universityId?: string;
 }
 
 export class UpdateVehicleDto extends CreateVehicleDto { }
@@ -51,4 +59,8 @@ export class EnrollTransportDto {
 
     @IsString()
     pickupPoint: string;
+
+    @IsOptional()
+    @IsMongoId()
+    universityId?: string;
 }

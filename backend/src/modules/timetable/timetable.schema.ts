@@ -64,6 +64,12 @@ export class Timetable {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'AcademicYear', required: true })
     academicYearId: MongooseSchema.Types.ObjectId;
 
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Program', required: true })
+    programId: MongooseSchema.Types.ObjectId;
+
+    @Prop({ type: String, enum: ['DRAFT', 'PUBLISHED'], default: 'DRAFT' })
+    status: string;
+
     @Prop({ default: true })
     isActive: boolean;
 

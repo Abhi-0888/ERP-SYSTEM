@@ -9,10 +9,10 @@ export class AuditLog extends Document {
     @Prop({ required: true })
     module: string; // e.g., 'STUDENT', 'COURSE', 'FEE'
 
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
     userId: string;
 
-    @Prop({ required: true })
+    @Prop()
     username: string;
 
     @Prop({ type: MongooseSchema.Types.Mixed })
