@@ -62,7 +62,12 @@ export default function LoginPage() {
 
   const handleDemoLogin = (demoEmail: string) => {
     setEmail(demoEmail);
-    setPassword("Password@123");
+    // Role-based passwords to match seed script and credentials.md
+    if (demoEmail.startsWith('student')) {
+      setPassword("student123");
+    } else {
+      setPassword("admin123");
+    }
   };
 
   return (
@@ -157,7 +162,7 @@ export default function LoginPage() {
 
               {/* Demo Accounts */}
               <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-slate-500 text-center mb-3">Demo Accounts (Password: Password@123)</p>
+                <p className="text-sm text-slate-500 text-center mb-3">Quick Login (Admins: admin123, Students: student123)</p>
                 <div className="grid grid-cols-3 gap-2">
                   {demoAccounts.map((account) => (
                     <Button
