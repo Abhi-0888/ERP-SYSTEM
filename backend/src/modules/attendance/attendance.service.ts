@@ -37,8 +37,23 @@ export class AttendanceService {
                 date: dto.date || new Date(),
             }));
 
-            const result = await this.attendanceModel.insertMany(attendanceRecords);
-            return { message: `${result.length} attendance records marked`, count: result.length };
+            const bulkOps: any[] = attendanceRecords.map(record => ({
+                updateOne: {
+                    filter: { 
+                        studentId: new Types.ObjectId(record.studentId), 
+                        courseId: new Types.ObjectId(record.courseId), 
+                        date: {
+                            $gte: new Date(new Date(record.date).setHours(0,0,0,0)),
+                            $lt: new Date(new Date(record.date).setHours(23,59,59,999))
+                        } 
+                    },
+                    update: { $set: record },
+                    upsert: true
+                }
+            }));
+
+            const result = await this.attendanceModel.bulkWrite(bulkOps);
+            return { message: `${result.upsertedCount + result.modifiedCount} attendance records processed`, count: result.upsertedCount + result.modifiedCount };
         } catch (error) {
             throw error;
         }
@@ -53,10 +68,11 @@ export class AttendanceService {
             if (filter.courseId) query.courseId = filter.courseId;
             if (filter.status) query.status = filter.status;
             if (filter.startDate && filter.endDate) {
-                query.date = {
-                    $gte: new Date(filter.startDate),
-                    $lte: new Date(filter.endDate),
-                };
+                const startOfDay = new Date(filter.startDate);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(filter.endDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                query.date = { $gte: startOfDay, $lte: endOfDay };
             }
 
             const attendance = await this.attendanceModel
@@ -156,7 +172,12 @@ export class AttendanceService {
             const query: any = { studentId: student._id };
             if (courseId) query.courseId = courseId;
 
-            const records = await this.attendanceModel.find(query).sort({ date: -1 });
+            const records = await this.attendanceModel
+                .find(query)
+                .populate('courseId', 'name code credits semester')
+                .populate('markedBy', 'name username')
+                .sort({ date: -1 })
+                .exec();
 
             const totalClasses = records.length;
             const presentClasses = records.filter(r => r.status === 'PRESENT').length;

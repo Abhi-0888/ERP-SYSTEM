@@ -193,6 +193,11 @@ export class BulkAssignFeeDto {
     @IsString()
     @IsOptional()
     remarks?: string;
+
+    @IsString()
+    @IsOptional()
+    @Matches(/^[0-9a-fA-F]{24}$/)
+    universityId?: string;
 }
 
 export class FeeFilterDto {
@@ -246,6 +251,10 @@ export class InitiateOnlinePaymentDto {
     @IsNumber()
     @Min(1)
     amount: number;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class VerifyPaymentDto {
@@ -264,6 +273,10 @@ export class VerifyPaymentDto {
     @IsString()
     @IsNotEmpty()
     feeId: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class FeeReportDto {
@@ -290,4 +303,48 @@ export class FeeReportDto {
     @IsOptional()
     @Type(() => Date)
     endDate?: Date;
+}
+export class AddFineDto {
+    @IsString()
+    @IsNotEmpty()
+    @Matches(/^[0-9a-fA-F]{24}$/)
+    studentId: string;
+
+    @IsNumber()
+    @Min(1)
+    amount: number;
+
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(200)
+    reason: string;
+
+    @IsOptional()
+    @IsString()
+    @Matches(/^[0-9a-fA-F]{24}$/)
+    feeId?: string;
+
+    @IsOptional()
+    @IsString()
+    @Matches(/^[0-9a-fA-F]{24}$/)
+    universityId?: string;
+}
+
+export class BulkAddFineDto {
+    @IsArray()
+    @IsString({ each: true })
+    studentIds: string[];
+
+    @IsNumber()
+    @Min(1)
+    amount: number;
+
+    @IsString()
+    @IsNotEmpty()
+    reason: string;
+
+    @IsOptional()
+    @IsString()
+    @Matches(/^[0-9a-fA-F]{24}$/)
+    universityId?: string;
 }

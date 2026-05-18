@@ -54,6 +54,9 @@ export class StudentProfile {
 
     @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'Course', default: [] })
     enrolledCourses: MongooseSchema.Types.ObjectId[];
+
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'University' })
+    universityId: MongooseSchema.Types.ObjectId;
 }
 
 export const StudentProfileSchema = SchemaFactory.createForClass(StudentProfile);

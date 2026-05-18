@@ -27,6 +27,10 @@ export class MarkAttendanceDto {
     @IsString()
     @IsOptional()
     remarks?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class BulkMarkAttendanceDto {
@@ -44,6 +48,10 @@ export class BulkMarkAttendanceDto {
     @IsString()
     @IsOptional()
     remarks?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class UpdateAttendanceDto {
@@ -54,6 +62,10 @@ export class UpdateAttendanceDto {
     @IsString()
     @IsOptional()
     remarks?: string;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class AttendanceFilterDto {
@@ -86,6 +98,10 @@ export class AttendanceFilterDto {
 
     @IsOptional()
     limit?: number;
+
+    @IsString()
+    @IsOptional()
+    universityId?: string;
 }
 
 export class AttendanceReportDto {

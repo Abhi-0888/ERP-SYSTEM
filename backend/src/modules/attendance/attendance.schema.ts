@@ -17,7 +17,7 @@ export class Attendance {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
     markedBy: MongooseSchema.Types.ObjectId; // Faculty
 
-    @Prop({ type: String, enum: ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'], required: true })
+    @Prop({ type: String, enum: ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED', 'LEAVE'], required: true })
     status: string;
 
     @Prop()

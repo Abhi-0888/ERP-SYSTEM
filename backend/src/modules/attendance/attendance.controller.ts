@@ -33,7 +33,8 @@ export class AttendanceController {
     async markAttendance(@Body() dto: MarkAttendanceDto, @Request() req) {
         try {
             // Auto-inject markedBy from authenticated user
-            const enrichedDto = { ...dto, markedBy: req.user.sub };
+            const userId = req.user.userId || req.user.sub || req.user._id;
+            const enrichedDto = { ...dto, markedBy: userId };
             return await this.attendanceService.markAttendance(enrichedDto, req.user);
         } catch (error) {
             throw new HttpException(
@@ -48,7 +49,8 @@ export class AttendanceController {
     async markBulkAttendance(@Body('attendance') dtos: MarkAttendanceDto[], @Request() req) {
         try {
             // Auto-inject markedBy for each record
-            const enrichedDtos = dtos.map(dto => ({ ...dto, markedBy: req.user.sub }));
+            const userId = req.user.userId || req.user.sub || req.user._id;
+            const enrichedDtos = dtos.map(dto => ({ ...dto, markedBy: userId }));
             return await this.attendanceService.markBulkAttendance(enrichedDtos, req.user);
         } catch (error) {
             throw new HttpException(
@@ -70,7 +72,7 @@ export class AttendanceController {
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string,
         @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10,
+        @Query('limit') limit: number = 200,
     ) {
         try {
             const filter: AttendanceFilterDto = {

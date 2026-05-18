@@ -148,5 +148,20 @@ export const FeeService = {
         document.body.appendChild(link);
         link.click();
         link.remove();
+    },
+    
+    bulkAddFine: async (data: { studentIds: string[]; amount: number; reason: string }): Promise<any> => {
+        const response = await api.post('/fees/fine/bulk', data);
+        return response.data;
+    },
+
+    bulkAssignFees: async (data: { studentIds: string[]; feeId: string; remarks?: string }): Promise<any> => {
+        const response = await api.post('/fees/assign/bulk', data);
+        return response.data;
+    },
+
+    getStudentDetailedFees: async (studentId: string): Promise<any> => {
+        const response = await api.get(`/fees/student/${studentId}/details`);
+        return response.data;
     }
 };

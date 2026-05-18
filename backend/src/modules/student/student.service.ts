@@ -246,7 +246,7 @@ export class StudentService {
             // For now, simple filter
             return this.studentProfileModel.find({
                 enrolledCourses: courseId
-            }).populate('userId', 'username email').exec();
+            }).populate('userId', 'username email name').sort({ enrollmentNo: 1 }).exec();
         } catch (error) {
             throw error;
         }

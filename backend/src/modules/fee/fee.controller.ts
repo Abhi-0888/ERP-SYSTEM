@@ -20,7 +20,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { UniversityIsolationGuard } from '../../common/guards/university-isolation.guard';
-import { CreateFeeDto, UpdateFeeDto, RecordPaymentDto, AssignFeeToStudentDto, FeeFilterDto, FeeType, FeeStatus, InitiateOnlinePaymentDto, VerifyPaymentDto } from './fee.dto';
+import { CreateFeeDto, UpdateFeeDto, RecordPaymentDto, AssignFeeToStudentDto, FeeFilterDto, FeeType, FeeStatus, InitiateOnlinePaymentDto, VerifyPaymentDto, BulkAddFineDto, BulkAssignFeeDto } from './fee.dto';
 
 @Controller('fees')
 @UseGuards(JwtAuthGuard, RolesGuard, UniversityIsolationGuard)
@@ -317,7 +317,14 @@ export class FeeController {
     @Get('student/:studentId/status')
     @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN, Role.STUDENT, Role.REGISTRAR)
     async getStudentFeeStatus(@Param('studentId') studentId: string, @Request() req) {
-        return this.getStudentFees(studentId, req);
+        try {
+            return await this.feeService.getStudentsPaymentStatus(req.user, { studentId });
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to fetch student fee status',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
     }
 
 
@@ -358,4 +365,42 @@ export class FeeController {
     }
 
 
+    @Post('fine/bulk')
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN)
+    async bulkAddFine(@Body() dto: BulkAddFineDto, @Request() req) {
+        try {
+            return await this.feeService.bulkAddFine(dto, req.user);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to add bulk fines',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+    }
+
+    @Post('assign/bulk')
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN)
+    async bulkAssignFees(@Body() dto: BulkAssignFeeDto, @Request() req) {
+        try {
+            return await this.feeService.bulkAssignFees(dto, req.user);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to bulk assign fees',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+    }
+
+    @Get('student/:studentId/details')
+    @Roles(Role.ACCOUNTANT, Role.FINANCE, Role.UNIVERSITY_ADMIN, Role.REGISTRAR)
+    async getStudentDetailedFees(@Param('studentId') studentId: string, @Request() req) {
+        try {
+            return await this.feeService.getStudentDetailedFees(studentId, req.user);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to fetch detailed fees',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
 }

@@ -327,6 +327,16 @@ export class AcademicService {
                 filter.departmentId = { $in: depts.map(d => d._id) };
             }
 
+            // HOD: see all courses in their department only
+            if (currentUser.role === Role.HOD && currentUser.departmentId) {
+                filter.departmentId = currentUser.departmentId;
+            }
+
+            // FACULTY: see only courses they are assigned to teach
+            if (currentUser.role === Role.FACULTY) {
+                filter.facultyId = currentUser.userId || currentUser._id || currentUser.sub;
+            }
+
             if (semester) filter.semester = semester;
 
             const courses = await this.courseModel

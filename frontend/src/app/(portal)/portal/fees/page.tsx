@@ -50,7 +50,27 @@ export default function StudentFeesPage() {
             // 1. Initiate payment on backend
             const { orderId, currency, key } = await FeeService.initiateOnlinePayment({ feeId, amount });
 
-            // 2. Open Razorpay Checkout
+            if (key === 'rzp_test_placeholder') {
+                // Simulate Razorpay success for local development without actual API keys
+                setTimeout(async () => {
+                    try {
+                        await FeeService.verifyPayment({
+                            razorpayOrderId: orderId,
+                            razorpayPaymentId: 'pay_simulated_' + Date.now(),
+                            razorpaySignature: 'simulated_signature',
+                            feeId
+                        });
+                        toast.success("Simulated Payment successful!");
+                        fetchData();
+                    } catch (err) {
+                        toast.error("Payment verification failed");
+                    } finally {
+                        setPaying(null);
+                    }
+                }, 1000);
+                return;
+            }
+
             const options = {
                 key: key,
                 amount: amount * 100,
@@ -87,6 +107,7 @@ export default function StudentFeesPage() {
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Failed to initiate payment");
         } finally {
+            if (!paying) return; // Keep paying state active during simulation
             setPaying(null);
         }
     };
@@ -257,28 +278,15 @@ export default function StudentFeesPage() {
                                     </TableCell>
                                 </TableRow>
                             )) : (
-                                // Mock data for better visual if empty
-                                [
-                                    { name: "Tuition Fee - Sem 4", date: "15 Mar 2024", amount: 125000, status: "PAID" },
-                                    { name: "Hostel & Mess Charges", date: "15 Mar 2024", amount: 45000, status: "PAID" },
-                                    { name: "Library & Lab Fee", date: "15 Feb 2024", amount: 12000, status: "PAID" },
-                                ].map((fee, i) => (
-                                    <TableRow key={i} className="hover:bg-slate-50/50 transition-colors border-b last:border-0 opacity-60">
-                                        <TableCell className="py-6 px-8">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-slate-900 text-base">{fee.name}</span>
-                                                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">HISTORICAL RECORD</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="py-6 px-8 text-slate-400 font-medium">{fee.date}</TableCell>
-                                        <TableCell className="py-6 px-8 text-center text-slate-400">₹{fee.amount.toLocaleString()}</TableCell>
-                                        <TableCell className="py-6 px-8 text-right">
-                                            <div className="inline-flex items-center gap-2 text-emerald-600 font-black text-[10px] tracking-widest uppercase bg-emerald-50 px-3 py-1 rounded-lg">
-                                                <CheckCircle2 className="h-3 w-3" /> {fee.status}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                <TableRow>
+                                    <TableCell colSpan={4} className="py-12 px-8 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <AlertCircle className="h-10 w-10 text-slate-200" />
+                                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No Financial Records Found</p>
+                                            <p className="text-slate-500 text-sm max-w-xs mx-auto font-medium">Your fee assignments for the current academic year haven't been published yet.</p>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
                             )}
                         </TableBody>
                     </Table>

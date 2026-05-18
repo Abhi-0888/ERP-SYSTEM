@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import Razorpay from 'razorpay';
 import * as crypto from 'crypto';
 import { FeeStructure, FeeStructureDocument, Transaction, TransactionDocument, FeeStatusEnum, PaymentMethodEnum, TransactionSchema } from './fee.schema';
-import { CreateFeeDto, UpdateFeeDto, RecordPaymentDto, AssignFeeToStudentDto, FeeFilterDto, InitiateOnlinePaymentDto, VerifyPaymentDto } from './fee.dto';
+import { CreateFeeDto, UpdateFeeDto, RecordPaymentDto, AssignFeeToStudentDto, FeeFilterDto, InitiateOnlinePaymentDto, VerifyPaymentDto, BulkAddFineDto, BulkAssignFeeDto } from './fee.dto';
 import { Role } from '../../common/enums/role.enum';
 import { StudentProfile, StudentProfileDocument } from '../student/student-profile.schema';
 
@@ -253,7 +253,16 @@ export class FeeService {
 
     async initiateOnlinePayment(dto: InitiateOnlinePaymentDto, currentUser: any): Promise<any> {
         try {
-            const studentId = currentUser.profileId || currentUser.userId || currentUser._id;
+            const userId = currentUser.userId || currentUser._id || currentUser.sub;
+            let studentId = currentUser.profileId;
+            
+            if (!studentId) {
+                const student = await this.studentProfileModel.findOne({ userId });
+                if (!student) {
+                    throw new NotFoundException('Student profile not found for this user');
+                }
+                studentId = student._id;
+            }
             
             // Validate fee exists and is assigned
             const transaction = await this.transactionModel.findOne({
@@ -269,23 +278,38 @@ export class FeeService {
                 throw new BadRequestException('Fee already fully paid');
             }
 
-            const options = {
-                amount: Math.round(dto.amount * 100), // amount in the smallest currency unit
-                currency: 'INR',
-                receipt: `receipt_${transaction._id}`,
-            };
+            let orderId = `order_${Date.now()}`;
+            let orderAmount = Math.round(dto.amount * 100);
+            let orderCurrency = 'INR';
 
-            const order = await this.razorpay.orders.create(options);
+            const isTestKey = this.configService.get<string>('RAZORPAY_KEY_ID') === 'rzp_test_placeholder' || !this.configService.get<string>('RAZORPAY_KEY_ID');
+
+            if (!isTestKey) {
+                const options = {
+                    amount: orderAmount,
+                    currency: orderCurrency,
+                    receipt: `receipt_${transaction._id}`,
+                };
+
+                try {
+                    const order = await this.razorpay.orders.create(options);
+                    orderId = order.id;
+                    orderAmount = order.amount;
+                    orderCurrency = order.currency;
+                } catch (rzpErr: any) {
+                    throw new BadRequestException(rzpErr.error?.description || 'Razorpay order creation failed');
+                }
+            }
 
             // Save order ID to transaction
-            transaction.razorpayOrderId = order.id;
+            transaction.razorpayOrderId = orderId;
             await transaction.save();
 
             return {
-                orderId: order.id,
-                amount: order.amount,
-                currency: order.currency,
-                key: this.configService.get<string>('RAZORPAY_KEY_ID'),
+                orderId: orderId,
+                amount: orderAmount,
+                currency: orderCurrency,
+                key: this.configService.get<string>('RAZORPAY_KEY_ID') || 'rzp_test_placeholder',
             };
         } catch (error) {
             throw error;
@@ -294,14 +318,18 @@ export class FeeService {
 
     async verifyPayment(dto: VerifyPaymentDto, currentUser: any): Promise<any> {
         try {
-            const body = dto.razorpayOrderId + '|' + dto.razorpayPaymentId;
-            const expectedSignature = crypto
-                .createHmac('sha256', this.configService.get<string>('RAZORPAY_KEY_SECRET') || 'secret_placeholder')
-                .update(body.toString())
-                .digest('hex');
+            const isTestKey = this.configService.get<string>('RAZORPAY_KEY_SECRET') === 'secret_placeholder' || !this.configService.get<string>('RAZORPAY_KEY_SECRET');
 
-            if (expectedSignature !== dto.razorpaySignature) {
-                throw new BadRequestException('Invalid payment signature');
+            if (!isTestKey) {
+                const body = dto.razorpayOrderId + '|' + dto.razorpayPaymentId;
+                const expectedSignature = crypto
+                    .createHmac('sha256', this.configService.get<string>('RAZORPAY_KEY_SECRET') || '')
+                    .update(body.toString())
+                    .digest('hex');
+
+                if (expectedSignature !== dto.razorpaySignature) {
+                    throw new BadRequestException('Invalid payment signature');
+                }
             }
 
             // Update transaction
@@ -342,59 +370,88 @@ export class FeeService {
             const skip = (page - 1) * limit;
 
             const studentQuery: any = {};
-            if (currentUser.role !== Role.SUPER_ADMIN) {
-                studentQuery.universityId = currentUser.universityId;
+            if (currentUser.role !== Role.SUPER_ADMIN && currentUser.universityId) {
+                const { Types } = require('mongoose');
+                studentQuery.universityId = new Types.ObjectId(currentUser.universityId);
             }
 
-            if (filter.departmentId) studentQuery.departmentId = filter.departmentId;
-            if (filter.semester) studentQuery.currentSemester = filter.semester;
-            if (filter.academicYearId) studentQuery.academicYearId = filter.academicYearId;
+            if (filter.studentId) {
+                const student = await this.studentProfileModel.findOne({ 
+                    $or: [
+                        { _id: filter.studentId },
+                        { userId: filter.studentId }
+                    ]
+                });
+                console.log('DEBUG: Found student profile:', student ? student._id : 'NONE');
+                if (student) studentQuery._id = student._id;
+                else studentQuery._id = filter.studentId;
+            }
 
-            const students = await this.studentProfileModel
+            console.log('DEBUG: studentQuery:', JSON.stringify(studentQuery));
+
+            if (filter.departmentId && filter.departmentId !== 'ALL') studentQuery.departmentId = filter.departmentId;
+            if (filter.semester) studentQuery.currentSemester = filter.semester;
+
+            // Fetch students without limit first to filter by status in memory
+            // This is necessary because status is a calculated field
+            const allMatchingStudents = await this.studentProfileModel
                 .find(studentQuery)
                 .populate('userId', 'name email')
                 .populate('departmentId', 'name')
-                .skip(skip)
-                .limit(limit)
                 .exec();
 
-            const total = await this.studentProfileModel.countDocuments(studentQuery);
-
-            const result = await Promise.all(students.map(async (student) => {
+            const result = await Promise.all(allMatchingStudents.map(async (student) => {
                 const transactions = await this.transactionModel.find({ studentId: student._id }).populate('feeId');
                 
                 const totalAmount = transactions.reduce((acc, curr) => acc + curr.amount, 0);
                 const totalPaid = transactions.reduce((acc, curr) => acc + curr.amountPaid, 0);
                 const pendingAmount = totalAmount - totalPaid;
 
-                let overallStatus = 'Not Paid';
+                let overallStatus = 'No Fees Assigned';
                 if (totalAmount > 0) {
-                    if (pendingAmount === 0) overallStatus = 'Paid';
-                    else if (totalPaid > 0) overallStatus = 'Partially Paid';
+                    if (pendingAmount === 0) overallStatus = FeeStatusEnum.FULLY_PAID;
+                    else if (totalPaid > 0) overallStatus = FeeStatusEnum.PARTIALLY_PAID;
+                    else overallStatus = FeeStatusEnum.PENDING;
                 }
 
                 return {
                     studentId: student._id,
-                    enrollmentNo: student.enrollmentNo,
                     name: (student.userId as any)?.name,
+                    enrollmentNo: student.enrollmentNo,
                     department: (student.departmentId as any)?.name,
                     semester: student.currentSemester,
                     totalAmount,
                     totalPaid,
                     pendingAmount,
                     status: overallStatus,
-                    transactions: transactions.map(t => ({
-                        feeName: (t.feeId as any)?.name,
-                        amount: t.amount,
-                        paid: t.amountPaid,
-                        status: t.status,
-                        dueDate: t.dueDate
-                    }))
+                    pendingFees: transactions.map(t => ({
+                        ...t.toObject(),
+                        feeStructureId: t.feeId, // Map for frontend compatibility
+                    })),
                 };
             }));
 
+            // Filter by status in memory if requested
+            let filteredResult = result;
+            if (filter.status && (filter.status as any) !== 'ALL') {
+                filteredResult = result.filter(s => s.status === filter.status);
+            }
+
+            const total = filteredResult.length;
+            const paginatedResult = filteredResult.slice(skip, skip + limit);
+
+            if (filter.studentId && filteredResult.length > 0) {
+                const s = filteredResult[0];
+                return {
+                    ...s,
+                    totalDue: s.pendingAmount,
+                    totalPaid: s.totalPaid,
+                    pendingFees: s.pendingFees,
+                };
+            }
+
             return {
-                data: result,
+                data: paginatedResult,
                 pagination: { total, page, limit, pages: Math.ceil(total / limit) }
             };
         } catch (error) {
@@ -449,5 +506,124 @@ export class FeeService {
         ).join('\n');
 
         return header + rows;
+    }
+
+    async bulkAddFine(dto: BulkAddFineDto, currentUser: any): Promise<any> {
+        const results = [];
+        for (const studentId of dto.studentIds) {
+            let transaction = await this.transactionModel.findOne({
+                studentId,
+                status: FeeStatusEnum.PENDING,
+            });
+
+            if (transaction) {
+                transaction.lateFeesApplied = (transaction.lateFeesApplied || 0) + dto.amount;
+                transaction.remarks = `${transaction.remarks || ''}\nFine added: ${dto.reason} (₹${dto.amount})`.trim();
+                await transaction.save();
+                results.push({ studentId, status: 'Added to existing transaction', transactionId: transaction._id });
+            } else {
+                const newTxn = await this.transactionModel.create({
+                    studentId,
+                    amount: dto.amount,
+                    amountPaid: 0,
+                    status: FeeStatusEnum.PENDING,
+                    remarks: `Fine: ${dto.reason}`,
+                    universityId: currentUser.universityId,
+                    lateFeesApplied: dto.amount,
+                    dueDate: new Date(),
+                });
+                results.push({ studentId, status: 'New fine transaction created', transactionId: newTxn._id });
+            }
+        }
+        return { message: `${dto.studentIds.length} fines processed`, results };
+    }
+
+    async getStudentDetailedFees(studentId: string, currentUser: any): Promise<any> {
+        const student = await this.studentProfileModel.findById(studentId)
+            .populate('userId', 'name email')
+            .populate('departmentId', 'name')
+            .exec();
+
+        if (!student) throw new NotFoundException('Student profile not found');
+
+        const transactions = await this.transactionModel.find({ studentId })
+            .populate('feeId')
+            .populate('processedBy', 'name')
+            .sort({ createdAt: -1 })
+            .exec();
+
+        return {
+            student: {
+                id: student._id,
+                name: (student.userId as any)?.name,
+                email: (student.userId as any)?.email,
+                enrollmentNo: student.enrollmentNo,
+                department: (student.departmentId as any)?.name,
+                semester: student.currentSemester,
+            },
+            transactions: transactions.map(t => ({
+                id: t._id,
+                feeName: (t.feeId as any)?.name || 'Manual Fine / Misc',
+                type: (t.feeId as any)?.type || 'OTHER',
+                amount: t.amount,
+                paid: t.amountPaid,
+                lateFees: t.lateFeesApplied,
+                status: t.status,
+                paymentDate: t.paymentDate,
+                transactionId: t.transactionId,
+                method: t.paymentMethod,
+                remarks: t.remarks,
+                processedBy: (t.processedBy as any)?.name,
+            }))
+        };
+    }
+
+    async bulkAssignFees(dto: BulkAssignFeeDto, currentUser: any): Promise<any> {
+        const fee = await this.feeStructureModel.findById(dto.feeId);
+        if (!fee) throw new NotFoundException('Fee structure not found');
+
+        let targetIds = dto.studentIds;
+        if (dto.studentIds.includes('ALL')) {
+            const universityId = dto.universityId || currentUser.universityId;
+            const query: any = {};
+            if (universityId) query.universityId = universityId;
+            
+            const allStudents = await this.studentProfileModel.find(query)
+                .select('_id')
+                .exec();
+            targetIds = allStudents.map(s => s._id.toString());
+        }
+
+        const results = { assigned: 0, skipped: 0, errors: [] };
+
+        for (const studentId of targetIds) {
+            try {
+                const existing = await this.transactionModel.findOne({
+                    studentId,
+                    feeId: dto.feeId,
+                });
+
+                if (existing) {
+                    results.skipped++;
+                    continue;
+                }
+
+                await this.transactionModel.create({
+                    studentId,
+                    feeId: dto.feeId,
+                    amount: fee.amount,
+                    amountPaid: 0,
+                    status: 'PENDING',
+                    dueDate: fee.dueDate,
+                    universityId: currentUser.universityId,
+                    remarks: dto.remarks || `Bulk assigned: ${fee.name}`,
+                });
+                results.assigned++;
+            } catch (error: any) {
+                results.errors.push({ studentId, error: error.message });
+            }
+        }
+
+        return { message: 'Bulk assignment complete', ...results };
     }
 }

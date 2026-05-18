@@ -29,6 +29,7 @@ function FacultyAttendance() {
     const [attendance, setAttendance] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE'>>({});
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [confirmResult, setConfirmResult] = useState<null | { courseName: string; date: string; summary: Record<string, number>; total: number }>(null);
 
     const fetchCourses = useCallback(async () => {
         try {
@@ -43,19 +44,42 @@ function FacultyAttendance() {
         fetchCourses();
     }, [fetchCourses]);
 
-    const fetchStudents = useCallback(async (courseId: string) => {
-        if (!courseId) return;
+    const fetchStudentsAndAttendance = useCallback(async (courseId: string, date: string) => {
+        if (!courseId || !date) return;
         setLoading(true);
         try {
+            // Fetch students enrolled in the course
             const data = await StudentService.getByCourse(courseId);
             setStudents(data || []);
 
-            // Initialize default attendance as present
-            const initialAttendance: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE'> = {};
-            (data || []).forEach((s: Student) => {
-                initialAttendance[s._id] = 'PRESENT';
+            // Fetch existing attendance records for this course+date
+            const existing = await AttendanceService.getAttendance({
+                courseId,
+                startDate: date,
+                endDate: date,
+                limit: 500,
             });
-            setAttendance(initialAttendance);
+            const existingRecords: any[] = existing?.data || [];
+
+            // Build a map: studentId → status from saved records
+            const savedMap: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE'> = {};
+            existingRecords.forEach((rec: any) => {
+                const studentId = typeof rec.studentId === 'object'
+                    ? rec.studentId._id || rec.studentId
+                    : rec.studentId;
+                savedMap[studentId.toString()] = rec.status;
+            });
+
+            // Merge: use saved status if exists, else default to PRESENT
+            const merged: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE'> = {};
+            (data || []).forEach((s: Student) => {
+                merged[s._id] = savedMap[s._id] || 'PRESENT';
+            });
+            setAttendance(merged);
+
+            if (existingRecords.length > 0) {
+                toast.info(`Loaded ${existingRecords.length} existing records for this date.`);
+            }
         } catch (error) {
             console.error("Failed to fetch students", error);
             toast.error("Failed to load enrolled students");
@@ -66,9 +90,9 @@ function FacultyAttendance() {
 
     useEffect(() => {
         if (selectedCourse) {
-            fetchStudents(selectedCourse);
+            fetchStudentsAndAttendance(selectedCourse, selectedDate);
         }
-    }, [selectedCourse, fetchStudents]);
+    }, [selectedCourse, selectedDate, fetchStudentsAndAttendance]);
 
     const toggleStatus = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE' | 'LEAVE') => {
         setAttendance((prev) => ({ ...prev, [studentId]: status }));
@@ -76,7 +100,11 @@ function FacultyAttendance() {
 
     const handleSave = async () => {
         if (!selectedCourse) {
-            alert("Please select a course");
+            toast.error("Please select a course first");
+            return;
+        }
+        if (Object.keys(attendance).length === 0) {
+            toast.error("No students loaded to mark attendance");
             return;
         }
         setSaving(true);
@@ -89,14 +117,22 @@ function FacultyAttendance() {
             }));
 
             await AttendanceService.markBulkAttendance(bulkData as any);
-            alert("Attendance saved successfully");
+
+            // Build summary counts for confirmation popup
+            const summary: Record<string, number> = { PRESENT: 0, ABSENT: 0, LATE: 0, LEAVE: 0 };
+            Object.values(attendance).forEach(s => { summary[s] = (summary[s] || 0) + 1; });
+            const course = courses.find(c => c._id === selectedCourse);
+            setConfirmResult({
+                courseName: course ? `${course.name} (${course.code})` : 'Selected Course',
+                date: selectedDate,
+                summary,
+                total: bulkData.length,
+            });
         } catch (error: any) {
             console.error("Failed to save attendance", error);
-            alert(error.response?.data?.message || "Failed to save attendance");
+            toast.error(error.response?.data?.message || "Failed to save attendance");
         } finally {
-            setSaving(true);
-            // Artificial delay to show success before resetting state if needed
-            setTimeout(() => setSaving(false), 500);
+            setSaving(false);
         }
     };
 
@@ -106,6 +142,58 @@ function FacultyAttendance() {
 
     return (
         <div className="space-y-6">
+            {/* ✅ Confirmation Dialog */}
+            {confirmResult && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-5">
+                            <div className="flex items-center gap-3 text-white">
+                                <div className="bg-white/20 rounded-full p-2">
+                                    <Check className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold">Attendance Marked!</h2>
+                                    <p className="text-green-100 text-sm">Successfully saved for {confirmResult.total} students</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 space-y-4">
+                            <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Course</p>
+                                <p className="font-semibold text-slate-800">{confirmResult.courseName}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Date</p>
+                                <p className="font-semibold text-slate-800">
+                                    {new Date(confirmResult.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[
+                                    { label: 'Present', count: confirmResult.summary.PRESENT, color: 'bg-green-50 text-green-700 border-green-200' },
+                                    { label: 'Absent', count: confirmResult.summary.ABSENT, color: 'bg-red-50 text-red-700 border-red-200' },
+                                    { label: 'Late', count: confirmResult.summary.LATE, color: 'bg-orange-50 text-orange-700 border-orange-200' },
+                                    { label: 'Leave', count: confirmResult.summary.LEAVE, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+                                ].map(({ label, count, color }) => (
+                                    <div key={label} className={`rounded-xl border text-center p-3 ${color}`}>
+                                        <p className="text-2xl font-black">{count || 0}</p>
+                                        <p className="text-xs font-semibold">{label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="px-6 pb-5">
+                            <Button
+                                className="w-full bg-slate-900 hover:bg-slate-700 text-white rounded-xl"
+                                onClick={() => setConfirmResult(null)}
+                            >
+                                Done
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">Mark Attendance</h1>
@@ -199,29 +287,35 @@ function FacultyAttendance() {
                     ) : (
                         <Table>
                             <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-32">Reg No</TableHead>
-                                    <TableHead>Student Name</TableHead>
-                                    <TableHead className="text-center">Present</TableHead>
-                                    <TableHead className="text-center">Absent</TableHead>
-                                    <TableHead className="text-center">Late</TableHead>
+                                <TableRow className="bg-slate-50">
+                                    <TableHead className="w-10 text-center font-bold">#</TableHead>
+                                    <TableHead className="w-36 font-bold">Reg No</TableHead>
+                                    <TableHead className="font-bold">Student Name</TableHead>
+                                    <TableHead className="w-16 text-center font-bold text-green-700">Present</TableHead>
+                                    <TableHead className="w-16 text-center font-bold text-red-700">Absent</TableHead>
+                                    <TableHead className="w-16 text-center font-bold text-orange-700">Late</TableHead>
+                                    <TableHead className="w-16 text-center font-bold text-blue-700">Leave</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {students.length === 0 && !loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">No students found for this course.</TableCell>
+                                        <TableCell colSpan={7} className="text-center py-8 text-slate-500">No students found for this course.</TableCell>
                                     </TableRow>
                                 ) : (
-                                    students.map((student) => (
-                                        <TableRow key={student._id}>
-                                            <TableCell className="font-mono text-xs">{student.enrollmentNo}</TableCell>
-                                            <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
+                                    students.map((student, idx) => (
+                                        <TableRow key={student._id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                                            <TableCell className="text-center text-slate-400 text-xs">{idx + 1}</TableCell>
+                                            <TableCell className="font-mono text-xs font-medium">{student.enrollmentNo}</TableCell>
+                                            <TableCell className="font-medium">
+                                                {student.userId ? ((student.userId as any).name || (student.userId as any).username) : `${(student as any).firstName || ''} ${(student as any).lastName || ''}`.trim() || 'Unknown'}
+                                                <span className="ml-2 text-[10px] text-slate-400">Sem {student.currentSemester} · {(student as any).batch}</span>
+                                            </TableCell>
                                             <TableCell className="text-center">
                                                 <Button
                                                     size="sm"
                                                     variant={attendance[student._id] === "PRESENT" ? "default" : "outline"}
-                                                    className={`w-10 h-10 p-0 ${attendance[student._id] === "PRESENT" ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                                                    className={`w-10 h-10 p-0 ${attendance[student._id] === "PRESENT" ? 'bg-green-600 hover:bg-green-700 border-green-600' : 'hover:bg-green-50 hover:border-green-400'}`}
                                                     onClick={() => toggleStatus(student._id, "PRESENT")}
                                                 >
                                                     <Check className="h-4 w-4" />
@@ -231,7 +325,7 @@ function FacultyAttendance() {
                                                 <Button
                                                     size="sm"
                                                     variant={attendance[student._id] === "ABSENT" ? "destructive" : "outline"}
-                                                    className="w-10 h-10 p-0"
+                                                    className={`w-10 h-10 p-0 ${attendance[student._id] === "ABSENT" ? '' : 'hover:bg-red-50 hover:border-red-400'}`}
                                                     onClick={() => toggleStatus(student._id, "ABSENT")}
                                                 >
                                                     <X className="h-4 w-4" />
@@ -241,10 +335,20 @@ function FacultyAttendance() {
                                                 <Button
                                                     size="sm"
                                                     variant={attendance[student._id] === "LATE" ? "secondary" : "outline"}
-                                                    className={`w-10 h-10 p-0 ${attendance[student._id] === "LATE" ? 'bg-orange-500 text-white hover:bg-orange-600' : ''}`}
+                                                    className={`w-10 h-10 p-0 ${attendance[student._id] === "LATE" ? 'bg-orange-500 text-white hover:bg-orange-600' : 'hover:bg-orange-50 hover:border-orange-400'}`}
                                                     onClick={() => toggleStatus(student._id, "LATE")}
                                                 >
                                                     <Clock className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Button
+                                                    size="sm"
+                                                    variant={attendance[student._id] === "LEAVE" ? "secondary" : "outline"}
+                                                    className={`w-10 h-10 p-0 ${attendance[student._id] === "LEAVE" ? 'bg-blue-500 text-white hover:bg-blue-600' : 'hover:bg-blue-50 hover:border-blue-400'}`}
+                                                    onClick={() => toggleStatus(student._id, "LEAVE")}
+                                                >
+                                                    <AlertCircle className="h-4 w-4" />
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -372,37 +476,63 @@ function StudentAttendance() {
 
             {/* Attendance Records */}
             <Card className="border-0 shadow-sm">
-                <CardHeader>
-                    <CardTitle className="text-lg">Recent Records</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg">Attendance Log</CardTitle>
+                    <Badge variant="outline" className="font-mono">{summary?.records?.length || 0} records</Badge>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Course</TableHead>
-                                <TableHead>Status</TableHead>
+                            <TableRow className="bg-slate-50">
+                                <TableHead className="py-3 px-4 font-bold">Date</TableHead>
+                                <TableHead className="py-3 px-4 font-bold">Subject</TableHead>
+                                <TableHead className="py-3 px-4 font-bold">Marked By</TableHead>
+                                <TableHead className="py-3 px-4 font-bold text-center">Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {summary?.records?.length === 0 ? (
+                            {!summary?.records?.length ? (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center py-8 text-slate-500">No attendance records found.</TableCell>
+                                    <TableCell colSpan={4} className="text-center py-12 text-slate-500">
+                                        <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                        No attendance records found yet.
+                                    </TableCell>
                                 </TableRow>
                             ) : (
-                                summary?.records?.map((record: any) => (
-                                    <TableRow key={record._id}>
-                                        <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                                        <TableCell className="font-medium">
-                                            {typeof record.courseId === 'object' ? record.courseId.name : record.courseId}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={record.status === 'PRESENT' ? 'default' : 'destructive'}>
-                                                {record.status}
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                summary.records.map((record: any, idx: number) => {
+                                    const course = typeof record.courseId === 'object' ? record.courseId : null;
+                                    const teacher = typeof record.markedBy === 'object' ? record.markedBy : null;
+                                    const courseName = course?.name || 'Unknown Subject';
+                                    const courseCode = course?.code ? ` (${course.code})` : '';
+                                    const teacherName = teacher?.name || teacher?.username || 'Faculty';
+                                    const statusColors: Record<string, string> = {
+                                        PRESENT: 'bg-green-100 text-green-700 border-green-200',
+                                        ABSENT: 'bg-red-100 text-red-700 border-red-200',
+                                        LATE: 'bg-orange-100 text-orange-700 border-orange-200',
+                                        LEAVE: 'bg-blue-100 text-blue-700 border-blue-200',
+                                    };
+                                    return (
+                                        <TableRow key={record._id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
+                                            <TableCell className="py-3 px-4 text-sm font-medium">
+                                                {new Date(record.date).toLocaleDateString('en-IN', {
+                                                    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                                                })}
+                                            </TableCell>
+                                            <TableCell className="py-3 px-4">
+                                                <span className="font-semibold text-slate-800">{courseName}</span>
+                                                <span className="text-slate-400 text-xs">{courseCode}</span>
+                                            </TableCell>
+                                            <TableCell className="py-3 px-4 text-sm text-slate-600">
+                                                {teacherName}
+                                            </TableCell>
+                                            <TableCell className="py-3 px-4 text-center">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${statusColors[record.status] || 'bg-slate-100 text-slate-600'}`}>
+                                                    {record.status}
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             )}
                         </TableBody>
                     </Table>

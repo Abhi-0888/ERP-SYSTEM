@@ -41,6 +41,7 @@ export class AuthService {
                 sub: user._id,
                 role: user.role,
                 universityId: user.universityId,
+                departmentId: user.departmentId,
             };
     
             // Update last login
