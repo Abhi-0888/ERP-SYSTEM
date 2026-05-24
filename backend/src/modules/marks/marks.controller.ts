@@ -1,6 +1,4 @@
 import { Controller, Get, Post, Body, Param, UseGuards, HttpCode, HttpStatus, Query, Patch, Delete, HttpException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -8,13 +6,13 @@ import { Role } from '../../common/enums/role.enum';
 import { Request } from '@nestjs/common';
 
 import { CreateMarkDto, UpdateMarkDto, MarkFilterDto } from './marks.dto';
-import { Mark, MarkDocument } from './marks.schema';
+import { MarksService } from './marks.service';
 
 @Controller('marks')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class MarksController {
     constructor(
-        @InjectModel(Mark.name) private markModel: Model<MarkDocument>,
+        private readonly marksService: MarksService,
     ) { }
 
     @Post()
@@ -22,13 +20,7 @@ export class MarksController {
     @HttpCode(HttpStatus.CREATED)
     async create(@Body() createMarkDto: CreateMarkDto, @Request() req: any) {
         try {
-            const mark = new this.markModel({
-                ...createMarkDto,
-                enteredBy: req.user.id,
-            });
-            
-            const saved = await mark.save();
-            return saved;
+            return await this.marksService.create(createMarkDto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to create mark',
@@ -41,51 +33,7 @@ export class MarksController {
     @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
     async findAll(@Query() filter: MarkFilterDto, @Request() req: any) {
         try {
-            const query: any = {};
-            
-            // Apply filters based on user role
-            if (req.user.role === Role.STUDENT) {
-                query.studentId = req.user.id;
-            } else if (req.user.role === Role.FACULTY) {
-                // Faculty can see marks for their department students
-                query['$or'] = [
-                    { 'studentId.departmentId': req.user.departmentId },
-                ];
-            }
-            
-            if (filter.examId) {
-                query.examId = filter.examId;
-            }
-            
-            if (filter.studentId) {
-                query.studentId = filter.studentId;
-            }
-            
-            if (filter.courseId) {
-                query.courseId = filter.courseId;
-            }
-            
-            const skip = (filter.page - 1) * filter.limit || 0;
-            const marks = await this.markModel
-                .find(query)
-                .populate('studentId', 'name enrollmentNo')
-                .populate('examId', 'name type totalMarks')
-                .populate('courseId', 'name code')
-                .skip(skip)
-                .limit(filter.limit || 10)
-                .exec();
-            
-            const total = await this.markModel.countDocuments(query);
-            
-            return {
-                data: marks,
-                pagination: {
-                    total,
-                    page: filter.page || 1,
-                    limit: filter.limit || 10,
-                    totalPages: Math.ceil(total / (filter.limit || 10)),
-                },
-            };
+            return await this.marksService.findAll(filter, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch marks',
@@ -98,37 +46,7 @@ export class MarksController {
     @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
     async findByStudent(@Param('studentId') studentId: string, @Query() filter: MarkFilterDto, @Request() req: any) {
         try {
-            const query: any = { studentId };
-            
-            if (filter.examId) {
-                query.examId = filter.examId;
-            }
-            
-            if (filter.courseId) {
-                query.courseId = filter.courseId;
-            }
-            
-            const skip = (filter.page - 1) * filter.limit || 0;
-            const marks = await this.markModel
-                .find(query)
-                .populate('studentId', 'name enrollmentNo')
-                .populate('examId', 'name type totalMarks')
-                .populate('courseId', 'name code')
-                .skip(skip)
-                .limit(filter.limit || 10)
-                .exec();
-            
-            const total = await this.markModel.countDocuments(query);
-            
-            return {
-                data: marks,
-                pagination: {
-                    total,
-                    page: filter.page || 1,
-                    limit: filter.limit || 10,
-                    totalPages: Math.ceil(total / (filter.limit || 10)),
-                },
-            };
+            return await this.marksService.findByStudent(studentId, filter, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch student marks',
@@ -141,23 +59,7 @@ export class MarksController {
     @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN, Role.STUDENT)
     async findById(@Param('id') id: string, @Request() req: any) {
         try {
-            const mark = await this.markModel
-                .findById(id)
-                .populate('studentId', 'name enrollmentNo')
-                .populate('examId', 'name type totalMarks')
-                .populate('courseId', 'name code')
-                .exec();
-            
-            if (!mark) {
-                throw new HttpException('Mark not found', HttpStatus.NOT_FOUND);
-            }
-            
-            // Verify access rights
-            if (req.user.role === Role.STUDENT && mark.studentId.toString() !== req.user.id) {
-                throw new HttpException('Students can only view their own marks', HttpStatus.FORBIDDEN);
-            }
-            
-            return mark;
+            return await this.marksService.findById(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to fetch mark',
@@ -170,18 +72,7 @@ export class MarksController {
     @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async update(@Param('id') id: string, @Body() updateMarkDto: UpdateMarkDto, @Request() req: any) {
         try {
-            const mark = await this.markModel.findById(id);
-            if (!mark) {
-                throw new HttpException('Mark not found', HttpStatus.NOT_FOUND);
-            }
-            
-            // Verify access rights
-            if (req.user.role === Role.STUDENT && mark.studentId.toString() !== req.user.id.toString()) {
-                throw new HttpException('Students can only update their own marks', HttpStatus.FORBIDDEN);
-            }
-            
-            Object.assign(mark, updateMarkDto);
-            return await mark.save();
+            return await this.marksService.update(id, updateMarkDto, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to update mark',
@@ -194,18 +85,7 @@ export class MarksController {
     @Roles(Role.FACULTY, Role.HOD, Role.REGISTRAR, Role.UNIVERSITY_ADMIN, Role.SUPER_ADMIN)
     async remove(@Param('id') id: string, @Request() req: any) {
         try {
-            const mark = await this.markModel.findById(id);
-            if (!mark) {
-                throw new HttpException('Mark not found', HttpStatus.NOT_FOUND);
-            }
-            
-            // Verify access rights
-            if (req.user.role === Role.STUDENT && mark.studentId.toString() !== req.user.id) {
-                throw new HttpException('Students can only delete their own marks', HttpStatus.FORBIDDEN);
-            }
-            
-            await this.markModel.findByIdAndDelete(id);
-            return { message: 'Mark deleted successfully' };
+            return await this.marksService.remove(id, req.user);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to delete mark',

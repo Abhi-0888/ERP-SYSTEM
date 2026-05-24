@@ -91,7 +91,7 @@ export default function AcademicYearsPage() {
 
     const setAsCurrent = async (year: AcademicYear) => {
         try {
-            await AcademicService.updateAcademicYear(year._id, { isActive: true });
+            await AcademicService.setActiveAcademicYear(year._id);
             toast.success(`${year.year} set as active year`);
             fetchYears();
         } catch (error) {

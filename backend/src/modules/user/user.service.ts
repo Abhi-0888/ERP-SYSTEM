@@ -133,7 +133,10 @@ export class UserService {
             filter.universityId = universityId;
         }
 
-        return this.userModel.find(filter).select('-password').exec();
+        return this.userModel.find(filter)
+            .select('-password')
+            .populate('departmentId', 'name code')
+            .exec();
     }
 
     async forceLogout(id: string): Promise<User> {

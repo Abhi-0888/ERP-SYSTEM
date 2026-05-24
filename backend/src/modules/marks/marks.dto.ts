@@ -2,10 +2,16 @@ import { IsString, IsNumber, IsOptional, IsEnum, Min, Max, IsMongoId } from 'cla
 
 export class CreateMarkDto {
     @IsString()
+    @IsMongoId()
     studentId: string;
 
     @IsString()
+    @IsMongoId()
     examId: string;
+
+    @IsString()
+    @IsMongoId()
+    courseId: string;
 
     @IsNumber()
     @Min(0)
@@ -19,7 +25,9 @@ export class CreateMarkDto {
 
 export class UpdateMarkDto {
     @IsOptional()
-    @IsString()
+    @IsNumber()
+    @Min(0)
+    @Max(100)
     marksObtained?: number;
 
     @IsOptional()

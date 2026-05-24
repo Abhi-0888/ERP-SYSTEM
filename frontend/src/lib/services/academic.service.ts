@@ -77,6 +77,10 @@ export const AcademicService = {
         const response = await api.delete(`/academic/academic-years/${id}`);
         return response.data;
     },
+    setActiveAcademicYear: async (id: string): Promise<{ message: string; data: AcademicYear }> => {
+        const response = await api.post(`/academic/academic-years/${id}/set-active`);
+        return response.data;
+    },
 
     assignFaculty: async (courseId: string, facultyId: string): Promise<Course> => {
         const response = await api.patch(`/academic/courses/${courseId}/assign-faculty`, { facultyId });

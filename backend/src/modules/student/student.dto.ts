@@ -151,10 +151,12 @@ export class UpdateStudentDto {
 
 export class UpdateStudentEnrollmentDto {
     @IsString()
-    programId: string;
+    @IsOptional()
+    programId?: string;
 
     @IsString()
-    academicYearId: string;
+    @IsOptional()
+    academicYearId?: string;
 
     @IsOptional()
     semester?: number;
@@ -166,6 +168,10 @@ export class UpdateStudentEnrollmentDto {
     @IsOptional()
     @IsString({ each: true })
     courseIds?: string[];
+
+    @IsOptional()
+    @IsString({ each: true })
+    removeCourseIds?: string[];
 }
 
 export class StudentFilterDto {

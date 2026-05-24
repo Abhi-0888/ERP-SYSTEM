@@ -17,7 +17,7 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
-import { ClipboardList, Search, Plus, MoreHorizontal, Loader2 } from "lucide-react";
+import { ClipboardList, Search, Plus, MoreHorizontal, Loader2, Trash2 } from "lucide-react";
 import { StudentService } from "@/lib/services/student.service";
 import { AcademicService } from "@/lib/services/academic.service";
 import { toast } from "sonner";
@@ -83,6 +83,16 @@ export default function EnrollmentsPage() {
         }
     };
 
+    const handleRemoveCourse = async (studentId: string, courseId: string) => {
+        try {
+            await StudentService.updateEnrollment(studentId, { courseIds: [], removeCourseIds: [courseId] });
+            toast.success("Course removed successfully");
+            fetchData();
+        } catch (error) {
+            toast.error("Failed to remove course");
+        }
+    };
+
     if (loading) return <div className="flex items-center justify-center h-[400px]"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
 
     return (
@@ -126,9 +136,19 @@ export default function EnrollmentsPage() {
                                             <div className="flex flex-wrap gap-1">
                                                 {student.enrolledCourses?.length > 0 ? (
                                                     student.enrolledCourses.map((c: any) => (
-                                                        <Badge key={c._id || c} variant="secondary" className="text-[10px]">
-                                                            {typeof c === 'object' ? c.code : "Course"}
-                                                        </Badge>
+                                                        <div key={c._id || c} className="flex items-center gap-1">
+                                                            <Badge variant="secondary" className="text-[10px]">
+                                                                {typeof c === 'object' ? `${c.code} - ${c.name}` : "Course"}
+                                                            </Badge>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-5 w-5 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                                onClick={() => handleRemoveCourse(student._id, typeof c === 'object' ? c._id : c)}
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
                                                     ))
                                                 ) : (
                                                     <span className="text-xs text-slate-400 italic">No courses</span>

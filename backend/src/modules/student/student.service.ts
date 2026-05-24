@@ -115,6 +115,7 @@ export class StudentService {
                 .populate('programId', 'name code')
                 .populate('departmentId', 'name code universityId')
                 .populate('academicYearId', 'year')
+                .populate('enrolledCourses', 'name code')
                 .exec();
 
             const total = await this.studentProfileModel.countDocuments(query);
@@ -213,7 +214,26 @@ export class StudentService {
     async updateEnrollment(id: string, dto: UpdateStudentEnrollmentDto, currentUser: any): Promise<StudentProfile> {
         try {
             await this.findById(id, currentUser);
-            return this.studentProfileModel.findByIdAndUpdate(id, dto, { new: true });
+            const updateData: any = {};
+            if (dto.programId) updateData.programId = dto.programId;
+            if (dto.academicYearId) updateData.academicYearId = dto.academicYearId;
+            if (dto.semester) updateData.currentSemester = dto.semester;
+            
+            const updateOperations: any = { ...updateData };
+            if (dto.courseIds) {
+                updateOperations.$addToSet = { enrolledCourses: { $each: dto.courseIds } };
+            }
+            if (dto.removeCourseIds) {
+                updateOperations.$pull = { enrolledCourses: { $in: dto.removeCourseIds } };
+            }
+            
+            const updatedStudent = await this.studentProfileModel.findByIdAndUpdate(
+                id, 
+                updateOperations, 
+                { new: true }
+            ).populate('enrolledCourses', 'name code');
+            
+            return updatedStudent;
         } catch (error) {
             throw error;
         }

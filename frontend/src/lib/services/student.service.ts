@@ -53,7 +53,7 @@ export const StudentService = {
     },
 
     // Add this for enrollments page
-    updateEnrollment: async (id: string, data: { courseIds: string[] }): Promise<Student> => {
+    updateEnrollment: async (id: string, data: { courseIds?: string[]; removeCourseIds?: string[] }): Promise<Student> => {
         const response = await api.patch(`/students/${id}/enrollment`, data);
         return response.data;
     },
