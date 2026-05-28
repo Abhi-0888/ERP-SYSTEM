@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,36 +9,73 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    Home, Building, DoorOpen, Users, Plus, BedDouble, ShieldCheck, Zap, Loader2
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+    Building, DoorOpen, Users, Plus, BedDouble, ShieldCheck, Zap, Loader2
 } from "lucide-react";
 import { HostelService } from "@/lib/services/hostel.service";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
 
 export default function WardenDashboard() {
+    const router = useRouter();
+    const { user } = useAuth();
     const [hostels, setHostels] = useState<any[]>([]);
     const [summary, setSummary] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        name: "",
+        type: "Boys",
+        totalRooms: ""
+    });
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [hostelRes, summaryRes] = await Promise.all([
+                HostelService.getHostels(),
+                HostelService.getSummary()
+            ]);
+            setHostels(hostelRes.data || []);
+            setSummary(summaryRes);
+        } catch (error) {
+            console.error("Failed to load hostel data:", error);
+            toast.error("Failed to load accommodation data");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
-                const [hostelRes, summaryRes] = await Promise.all([
-                    HostelService.getHostels(),
-                    HostelService.getSummary()
-                ]);
-                setHostels(hostelRes.data || []);
-                setSummary(summaryRes);
-            } catch (error) {
-                console.error("Failed to load hostel data:", error);
-                toast.error("Failed to load accommodation data");
-            } finally {
-                setLoading(false);
-            }
-        };
         loadData();
     }, []);
+
+    const handleCreateHostel = async () => {
+        try {
+            if (!formData.name || !formData.totalRooms) {
+                return toast.error("Please fill all required fields");
+            }
+            const payload = {
+                ...formData,
+                totalRooms: parseInt(formData.totalRooms),
+                universityId: user?.universityId
+            };
+            await HostelService.createHostel(payload);
+            toast.success("Hostel block created successfully");
+            setIsCreateOpen(false);
+            setFormData({ name: "", type: "Boys", totalRooms: "" });
+            loadData();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to create hostel");
+        }
+    };
 
     if (loading) {
         return (
@@ -58,9 +95,73 @@ export default function WardenDashboard() {
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" className="rounded-xl bg-white"><Zap className="h-4 w-4 mr-2" />Maintenance</Button>
-                    <Button className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-100">
-                        <Plus className="h-4 w-4 mr-2" />New Block
-                    </Button>
+                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-100">
+                                <Plus className="h-4 w-4 mr-2" />New Block
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Register Residence Block</DialogTitle>
+                                <DialogDescription>
+                                    Add a new hostel building to the university inventory.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right font-bold">
+                                        Name
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        placeholder="e.g. Alpha Residence"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="col-span-3 rounded-xl"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label className="text-right font-bold">
+                                        Type
+                                    </Label>
+                                    <div className="col-span-3">
+                                        <Select
+                                            value={formData.type}
+                                            onValueChange={(val) => setFormData({ ...formData, type: val })}
+                                        >
+                                            <SelectTrigger className="rounded-xl">
+                                                <SelectValue placeholder="Select type" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Boys">Boys</SelectItem>
+                                                <SelectItem value="Girls">Girls</SelectItem>
+                                                <SelectItem value="Mixed">Mixed</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="rooms" className="text-right font-bold">
+                                        Capacity
+                                    </Label>
+                                    <Input
+                                        id="rooms"
+                                        type="number"
+                                        placeholder="Total Rooms"
+                                        value={formData.totalRooms}
+                                        onChange={(e) => setFormData({ ...formData, totalRooms: e.target.value })}
+                                        className="col-span-3 rounded-xl"
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" onClick={handleCreateHostel} className="bg-orange-600 hover:bg-orange-700 rounded-xl">
+                                    Register Block
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
 
@@ -124,7 +225,7 @@ export default function WardenDashboard() {
                                     title="No Residence Blocks"
                                     description="You haven't added any hostel buildings yet. Register your first block to start managing accommodations."
                                     actionLabel="Add Residence Block"
-                                    onAction={() => console.log("Open add hostel dialog")}
+                                    onAction={() => setIsCreateOpen(true)}
                                 />
                             </div>
                         ) : (
@@ -142,7 +243,11 @@ export default function WardenDashboard() {
                                     {hostels.map((hostel) => {
                                         const detail = summary?.hostelDetails?.find((d: any) => d.hostelId === hostel._id);
                                         return (
-                                            <TableRow key={hostel._id} className="border-slate-50">
+                                            <TableRow 
+                                                key={hostel._id} 
+                                                className="border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors"
+                                                onClick={() => router.push(`/modules/hostel/${hostel._id}`)}
+                                            >
                                                 <TableCell className="font-bold text-slate-900">{hostel.name}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline" className="rounded-lg uppercase text-[10px] font-bold border-slate-200">

@@ -5,8 +5,20 @@ export const HostelService = {
         const response = await api.get('/hostel/hostels', { params });
         return response.data;
     },
+    getHostel: async (id: string) => {
+        const response = await api.get(`/hostel/hostels/${id}`);
+        return response.data;
+    },
+    createHostel: async (data: any) => {
+        const response = await api.post('/hostel/hostels', data);
+        return response.data;
+    },
     getRooms: async (params?: any) => {
         const response = await api.get('/hostel/rooms', { params });
+        return response.data;
+    },
+    createRoom: async (data: any) => {
+        const response = await api.post('/hostel/rooms', data);
         return response.data;
     },
     getAvailableRooms: async (hostelId: string) => {
@@ -27,6 +39,10 @@ export const HostelService = {
     },
     getSummary: async () => {
         const response = await api.get('/hostel/reports/summary');
+        return response.data;
+    },
+    getMyRoom: async () => {
+        const response = await api.get(`/hostel/my-room`);
         return response.data;
     }
 };

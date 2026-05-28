@@ -347,4 +347,29 @@ export class HostelService {
 
         return summary;
     }
+
+    // ============= STUDENT VIEW =============
+    async getMyRoom(userId: string): Promise<any> {
+        // Look up StudentProfile using userId
+        const studentProfile = await this.hostelModel.db.model('StudentProfile').findOne({ user: userId });
+        if (!studentProfile) {
+            return null;
+        }
+
+        const room = await this.roomModel.findOne({
+            occupants: studentProfile._id,
+            isActive: true,
+        }).populate({
+            path: 'hostelId'
+        }).populate({
+            path: 'occupants',
+            populate: { path: 'user' } // also populate user for roommate info
+        });
+
+        if (!room) {
+            return null; // Return null if unallocated
+        }
+
+        return room;
+    }
 }

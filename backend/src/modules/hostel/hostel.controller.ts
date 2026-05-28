@@ -8,6 +8,7 @@ import {
     Delete,
     UseGuards,
     Query,
+    Req,
     HttpException,
     HttpStatus,
 } from '@nestjs/common';
@@ -222,13 +223,28 @@ export class HostelController {
     }
 
     @Get('reports/summary')
-    @Roles(Role.UNIVERSITY_ADMIN)
+    @Roles(Role.UNIVERSITY_ADMIN, Role.HOSTEL_WARDEN)
     async getHostelSummary(@Query('universityId') universityId?: string) {
         try {
             return await this.hostelService.generateHostelSummary(universityId);
         } catch (error) {
             throw new HttpException(
                 error.message || 'Failed to generate hostel summary',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+    // ============= STUDENT DASHBOARD =============
+    @Get('my-room')
+    @Roles(Role.STUDENT)
+    async getMyRoom(@Req() req: any) {
+        const userId = req.user.sub;
+        try {
+            return await this.hostelService.getMyRoom(userId);
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Failed to fetch my room',
                 HttpStatus.INTERNAL_SERVER_ERROR,
             );
         }
