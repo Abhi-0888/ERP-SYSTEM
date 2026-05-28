@@ -218,7 +218,6 @@ function AdminFeesView() {
         setActionLoading(true);
         try {
             await FeeService.recordPayment(paymentData.feeId, {
-                studentId: selectedStudentId!,
                 amountPaid: paymentData.amountPaid,
                 paymentMethod: paymentData.paymentMethod as any,
                 transactionId: paymentData.transactionId,
@@ -357,7 +356,7 @@ function AdminFeesView() {
                                                     </Button>
                                                     <Button variant="ghost" size="sm" onClick={() => {
                                                         if (confirm('Are you sure you want to delete this structure?')) {
-                                                            FeeService.deleteFeeStructure(fee._id).then(() => fetchStructures());
+                                                            FeeService.deleteFeeStructure(fee._id).then(() => fetchData());
                                                         }
                                                     }}>
                                                         Delete
@@ -626,7 +625,7 @@ function AdminFeesView() {
                                                 <TableCell className="text-right">
                                                     {txn.status !== 'FULLY_PAID' && (
                                                         <Button 
-                                                            size="xs" 
+                                                            size="sm" 
                                                             variant="outline" 
                                                             className="h-7 text-[10px]"
                                                             onClick={() => {
