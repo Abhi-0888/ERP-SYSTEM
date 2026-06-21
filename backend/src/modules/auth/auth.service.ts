@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { User, UserDocument } from '../user/user.schema';
 import { University, UniversityDocument } from '../university/university.schema';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -13,6 +14,7 @@ export class AuthService {
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         @InjectModel(University.name) private universityModel: Model<UniversityDocument>,
         private jwtService: JwtService,
+        private mailService: MailService,
     ) { }
 
     async validateUser(username: string, password: string): Promise<any> {
@@ -110,6 +112,8 @@ export class AuthService {
         user.resetPasswordToken = token;
         user.resetPasswordExpires = expires;
         await user.save();
+
+        await this.mailService.sendPasswordResetEmail(user.email, token, user.firstName || user.username);
 
         return { message: 'If an account with that email exists, a reset link has been sent.' };
     }

@@ -10,6 +10,8 @@ interface AuthContextType extends AuthState {
     login: (email: string, password: string) => Promise<void>;
     logout: () => void;
     setActiveRole: (role: Role) => void;
+    forgotPassword: (email: string) => Promise<{ message: string }>;
+    resetPassword: (token: string, newPassword: string) => Promise<{ message: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -127,6 +129,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const forgotPassword = async (email: string) => {
+        try {
+            const { data } = await api.post('/auth/forgot-password', { email });
+            return data;
+        } catch (error: any) {
+            console.error("Forgot password failed:", error);
+            throw new Error(error.response?.data?.message || "Forgot password request failed");
+        }
+    };
+
+    const resetPassword = async (token: string, newPassword: string) => {
+        try {
+            const { data } = await api.post('/auth/reset-password', { token, newPassword });
+            return data;
+        } catch (error: any) {
+            console.error("Reset password failed:", error);
+            throw new Error(error.response?.data?.message || "Reset password request failed");
+        }
+    };
+
     const logout = () => {
         if (user && activeRole) {
             api.post('/audit/logs', {
@@ -176,6 +198,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 login,
                 logout,
                 setActiveRole: handleSetActiveRole,
+                forgotPassword,
+                resetPassword,
             }}
         >
             {children}

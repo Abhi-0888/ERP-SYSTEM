@@ -3,24 +3,24 @@ import api from '../api';
 export interface Vehicle {
     _id?: string;
     id?: string;
-    plateNumber: string;
-    model: string;
+    registrationNumber: string;
+    model?: string;
     type: string;
     capacity: number;
     status: string;
-    driverName?: string;
-    driverPhone?: string;
+    health?: string;
+    driverId?: string;
 }
 
 export interface Route {
     _id?: string;
     id?: string;
     name: string;
-    source: string;
-    destination: string;
-    stops: { name: string; time: string }[];
-    fare: number;
-    isActive: boolean;
+    startPoint: string;
+    endPoint: string;
+    stops: string[];
+    vehicleId?: string;
+    isActive?: boolean;
 }
 
 export const TransportService = {

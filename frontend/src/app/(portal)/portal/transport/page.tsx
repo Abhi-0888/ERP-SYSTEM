@@ -113,7 +113,7 @@ export default function StudentTransportPage() {
                                 </h4>
                                 <div className="flex items-center gap-2 text-slate-500 font-bold text-sm tracking-tight">
                                     <MapPin className="h-4 w-4 text-emerald-500" />
-                                    {route.source} <span className="text-slate-300">→</span> {route.destination}
+                                    {route.startPoint || 'Source'} <span className="text-slate-300">→</span> {route.endPoint || 'Destination'}
                                 </div>
                             </div>
 

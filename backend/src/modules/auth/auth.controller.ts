@@ -13,18 +13,21 @@ export class AuthController {
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
+    @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
     async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto.username, loginDto.password);
     }
 
     @Post('forgot-password')
     @HttpCode(HttpStatus.OK)
+    @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
     async forgotPassword(@Body() dto: ForgotPasswordDto) {
         return this.authService.forgotPassword(dto.email);
     }
 
     @Post('reset-password')
     @HttpCode(HttpStatus.OK)
+    @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute
     async resetPassword(@Body() dto: ResetPasswordDto) {
         return this.authService.resetPassword(dto.token, dto.newPassword);
     }

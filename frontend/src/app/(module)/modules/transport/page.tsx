@@ -14,6 +14,8 @@ import {
 import { TransportService } from "@/lib/services/transport.service";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
+import { AddVehicleDialog } from "./components/add-vehicle-dialog";
+import { AddRouteDialog } from "./components/add-route-dialog";
 
 export default function TransportManagerDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -61,9 +63,7 @@ export default function TransportManagerDashboard() {
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" className="rounded-xl"><Gauge className="h-4 w-4 mr-2" />Live Tracking</Button>
-                    <Button className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-100">
-                        <Plus className="h-4 w-4 mr-2" />Add Vehicle
-                    </Button>
+                    <AddVehicleDialog onAdd={() => TransportService.getVehicles().then(v => setVehicles(v as any))} />
                 </div>
             </div>
 
@@ -126,8 +126,6 @@ export default function TransportManagerDashboard() {
                                 icon={Bus}
                                 title="No Vehicles Registered"
                                 description="Your fleet repository is empty. Add your first vehicle to start tracking routes."
-                                actionLabel="Add Vehicle"
-                                onAction={() => console.log("Open add vehicle dialog")}
                             />
                         </div>
                     ) : (
@@ -182,7 +180,10 @@ export default function TransportManagerDashboard() {
             <Card className="border-0 shadow-sm rounded-2xl border border-slate-100 overflow-hidden">
                 <CardHeader className="bg-slate-50/50 border-b flex flex-row items-center justify-between">
                     <CardTitle className="text-lg font-bold">Route Efficiency</CardTitle>
-                    <Button variant="link" className="text-indigo-600 font-bold p-0 h-auto">View Optimization Map</Button>
+                    <div className="flex items-center gap-4">
+                        <Button variant="link" className="text-indigo-600 font-bold p-0 h-auto">View Optimization Map</Button>
+                        <AddRouteDialog onAdd={() => TransportService.getRoutes().then(r => setRoutes(r as any))} />
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     {routes.length === 0 ? (
@@ -191,8 +192,6 @@ export default function TransportManagerDashboard() {
                                 icon={RouteIcon}
                                 title="No Routes Defined"
                                 description="Configure your transit lines to optimize student commute."
-                                actionLabel="Create Route"
-                                onAction={() => console.log("Open create route dialog")}
                             />
                         </div>
                     ) : (

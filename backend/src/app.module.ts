@@ -30,6 +30,7 @@ import { AppController } from './app.controller';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { DataIsolationInterceptor } from './common/interceptors/data-isolation.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
     imports: [
@@ -70,6 +71,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
         SuperAdminModule,
         AiModule,
         MarksModule,
+        MailModule,
     ],
     controllers: [AppController],
     providers: [

@@ -10,11 +10,10 @@ export const envValidationSchema = Joi.object({
   JWT_EXPIRATION: Joi.string().default('24h'),
   CORS_ORIGIN: Joi.string().default('http://localhost:3000'),
   
-  // Optional but recommended for production
-  SMTP_HOST: Joi.string().optional(),
-  SMTP_PORT: Joi.number().optional(),
-  SMTP_USER: Joi.string().optional(),
-  SMTP_PASS: Joi.string().optional(),
+  SMTP_HOST: Joi.string().when('NODE_ENV', { is: 'production', then: Joi.required(), otherwise: Joi.optional() }),
+  SMTP_PORT: Joi.number().when('NODE_ENV', { is: 'production', then: Joi.required(), otherwise: Joi.optional() }),
+  SMTP_USER: Joi.string().when('NODE_ENV', { is: 'production', then: Joi.required(), otherwise: Joi.optional() }),
+  SMTP_PASS: Joi.string().when('NODE_ENV', { is: 'production', then: Joi.required(), otherwise: Joi.optional() }),
   
   OPENROUTER_API_KEY: Joi.string().optional(),
 });
