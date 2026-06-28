@@ -113,7 +113,7 @@ export class AuthService {
         user.resetPasswordExpires = expires;
         await user.save();
 
-        await this.mailService.sendPasswordResetEmail(user.email, token, user.firstName || user.username);
+        await this.mailService.sendPasswordResetEmail(user.email, token, user.name || user.username);
 
         return { message: 'If an account with that email exists, a reset link has been sent.' };
     }
